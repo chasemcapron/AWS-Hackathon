@@ -1,139 +1,229 @@
-import React, { useState } from 'react';
-import { Mic, MicOff, Zap, BarChart3, MessageSquare, Power, ShieldCheck, Activity } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Mic, MicOff, Zap, BarChart3, MessageSquare, Power, Activity } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+// --- HOOKS ---
+
+/**
+ * Custom hook to handle raw audio capture for the "Speaker Method".
+ * Disables standard browser processing to ensure interviewer audio 
+ * (from speakers) is captured alongside the user's voice.
+ */
+const useAudioCapture = () => {
+  const [isRecording, setIsRecording] = useState(false);
+  const [analyser, setAnalyser] = useState(null);
+  const audioContextRef = useRef(null);
+  const streamRef = useRef(null);
+
+  const startRecording = useCallback(async () => {
+    try {
+      // 1. Request raw audio - the "Speaker Method" secret sauce:
+      // We disable echoCancellation and noiseSuppression so the mic 
+      // doesn't "clean" the audio and delete the speaker sound.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      });
+
+      // 2. Setup Web Audio API for visualization
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      const audioContext = new AudioContextClass();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyserNode = audioContext.createAnalyser();
+      
+      // Fine-tuning the FFT size for a smooth "Apple-style" wave
+      analyserNode.fftSize = 256;
+      source.connect(analyserNode);
+
+      // Store references
+      streamRef.current = stream;
+      audioContextRef.current = audioContext;
+      
+      setAnalyser(analyserNode);
+      setIsRecording(true);
+      
+      console.log("Nova: Audio capture initialized (Raw Mode).");
+    } catch (err) {
+      console.error("Nova Error: Could not access microphone.", err);
+    }
+  }, []);
+
+  const stopRecording = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+    }
+    
+    streamRef.current = null;
+    audioContextRef.current = null;
+    setAnalyser(null);
+    setIsRecording(false);
+    
+    console.log("Nova: Audio capture stopped.");
+  }, []);
+
+  return { isRecording, analyser, startRecording, stopRecording };
+};
+
+// --- COMPONENTS ---
+
+/**
+ * A minimalist Canvas-based frequency visualizer.
+ * Draws an "Apple-style" waveform that reacts to the AnalyserNode.
+ */
+const AudioVisualizer = ({ analyser, isRecording }) => {
+  const canvasRef = useRef(null);
+  const animationRef = useRef(null);
+
+  useEffect(() => {
+    if (!isRecording || !analyser) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const draw = () => {
+      animationRef.current = requestAnimationFrame(draw);
+      analyser.getByteFrequencyData(dataArray);
+
+      // Clear canvas with a transparent fill to ensure clean redraws
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const width = canvas.width;
+      const height = canvas.height;
+      const barWidth = (width / bufferLength) * 2.5;
+      let x = 0;
+
+      // Draw bars with a gradient
+      for (let i = 0; i < bufferLength; i++) {
+        const barHeight = (dataArray[i] / 255) * height;
+
+        // Apple-style color: Blue to Indigo with opacity based on volume
+        ctx.fillStyle = `rgba(96, 165, 250, ${dataArray[i] / 255 + 0.2})`;
+        
+        // Draw centered bars
+        ctx.fillRect(x, (height - barHeight) / 2, barWidth, barHeight);
+
+        x += barWidth + 2;
+      }
+    };
+
+    draw();
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [analyser, isRecording]);
+
+  return (
+    <canvas 
+      ref={canvasRef} 
+      width={400} 
+      height={100} 
+      className="w-full h-24 rounded-2xl opacity-80"
+    />
+  );
+};
+
+// --- MAIN APP ---
 
 export default function App() {
-  const [isRecording, setIsRecording] = useState(false);
-  const [stream, setStream] = useState(null);
+  const { isRecording, analyser, startRecording, stopRecording } = useAudioCapture();
 
-  const toggleRecording = async () => {
-    if (!isRecording) {
-      try {
-        const audioStream = await navigator.mediaDevices.getUserMedia({ 
-          audio: {
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false
-          } 
-        });
-        setStream(audioStream);
-        setIsRecording(true);
-        console.log("Nova Listening: System capture active.");
-      } catch (err) {
-        console.error("Microphone access denied:", err);
-      }
-    } else {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-      setStream(null);
-      setIsRecording(false);
-      console.log("Nova Standby: Session paused.");
-    }
+  const toggleRecording = () => {
+    if (isRecording) stopRecording();
+    else startRecording();
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 md:p-8 bg-[#020617] text-slate-50 selection:bg-blue-500/30">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 md:p-8 bg-[#020617] text-slate-50 selection:bg-blue-500/30 font-sans">
       
       {/* High-Vibrancy Ambient Glows */}
       <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px] animate-pulse" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px]" />
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-indigo-500/5 rounded-full blur-[150px]" />
 
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="relative w-full max-w-6xl h-[90vh] bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-[3rem] shadow-[0_0_100px_-20px_rgba(0,0,0,0.5)] flex overflow-hidden z-10"
+        className="relative w-full max-w-6xl h-[90vh] bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-[3rem] shadow-2xl flex overflow-hidden z-10"
       >
         
         {/* Sidebar Nav */}
         <div className="w-24 border-r border-white/5 flex flex-col items-center py-10 gap-10 bg-black/20">
-          <motion.div 
-            whileHover={{ scale: 1.1 }}
-            className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 border border-white/20"
-          >
+          <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg border border-white/20">
             <Zap className="text-white fill-white w-7 h-7" />
-          </motion.div>
+          </div>
           
           <nav className="flex flex-col gap-8 flex-1 justify-center">
             <button 
               onClick={toggleRecording}
               className={`p-4 rounded-2xl transition-all duration-500 group relative flex items-center justify-center ${
-                isRecording ? 'bg-red-500/20 text-red-400 mic-active border border-red-500/30' : 'text-slate-500 hover:text-white hover:bg-white/5'
+                isRecording ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'text-slate-500 hover:text-white hover:bg-white/5'
               }`}
             >
               {isRecording ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
-              <span className="absolute left-20 bg-slate-800 border border-white/10 text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0 pointer-events-none whitespace-nowrap z-50 shadow-xl">
-                {isRecording ? 'Deactivate' : 'Activate Mic'}
-              </span>
             </button>
-            
-            <button className="p-4 rounded-2xl text-slate-500 hover:text-white hover:bg-white/5 transition-all">
-              <BarChart3 className="w-6 h-6" />
-            </button>
-            <button className="p-4 rounded-2xl text-slate-500 hover:text-white hover:bg-white/5 transition-all">
-              <MessageSquare className="w-6 h-6" />
-            </button>
+            <BarChart3 className="w-6 h-6 text-slate-500 hover:text-white cursor-pointer" />
+            <MessageSquare className="w-6 h-6 text-slate-500 hover:text-white cursor-pointer" />
           </nav>
 
-          <button className="p-4 rounded-2xl text-slate-700 hover:text-red-400 transition-all">
-            <Power className="w-6 h-6" />
-          </button>
+          <Power className="w-6 h-6 text-slate-700 hover:text-red-400 cursor-pointer" />
         </div>
 
         {/* Main Interface */}
         <div className="flex-1 flex flex-col p-8 md:p-14 overflow-hidden">
           <header className="flex justify-between items-start mb-16">
             <div>
-              <motion.div 
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                className="flex items-center gap-2 mb-4"
-              >
+              <div className="flex items-center gap-2 mb-4">
                 <div className="h-[1px] w-8 bg-blue-500/50" />
                 <span className="text-blue-400 text-xs font-bold tracking-[0.3em] uppercase">Intelligence System</span>
-              </motion.div>
+              </div>
               <h1 className="text-6xl font-extralight tracking-tight mb-4">
                 Nova <span className="font-semibold bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">Assistant</span>
               </h1>
               <p className="text-slate-400 text-xl font-light max-w-lg leading-relaxed">
-                {isRecording ? "Live capture initialized. Calibrating for STAR methodology..." : "Your real-time interview telemetry. Click the mic to sync."}
+                {isRecording ? "Listening to environment audio..." : "Your real-time interview telemetry. Click the mic to sync."}
               </p>
             </div>
             
-            <div className="flex flex-col gap-3 items-end">
-              <div className={`px-5 py-2.5 rounded-full border text-[10px] font-bold tracking-widest flex items-center gap-3 transition-all duration-700 ${
-                isRecording ? 'bg-green-500/10 border-green-500/30 text-green-400 shadow-[0_0_20px_rgba(74,222,128,0.1)]' : 'bg-white/5 border-white/10 text-slate-500'
-              }`}>
-                <div className={`w-2 h-2 rounded-full ${isRecording ? 'bg-green-400 animate-ping' : 'bg-slate-600'}`} />
-                {isRecording ? 'STREAMING ACTIVE' : 'SYSTEM STANDBY'}
-              </div>
-              <div className="text-[10px] text-slate-600 font-medium tracking-tighter flex items-center gap-2">
-                <ShieldCheck className="w-3 h-3" /> SECURE ENCRYPTED SESSION
-              </div>
+            <div className={`px-5 py-2.5 rounded-full border text-[10px] font-bold tracking-widest flex items-center gap-3 ${
+              isRecording ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-white/5 border-white/10 text-slate-500'
+            }`}>
+              <div className={`w-2 h-2 rounded-full ${isRecording ? 'bg-green-400 animate-ping' : 'bg-slate-600'}`} />
+              {isRecording ? 'STREAMING ACTIVE' : 'SYSTEM STANDBY'}
             </div>
           </header>
 
-          {/* Central Workspace */}
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 h-full overflow-hidden">
-            <div className="bg-white/[0.03] border border-white/10 rounded-[2rem] p-8 flex flex-col justify-center items-center text-center group hover:bg-white/[0.05] transition-all">
-              <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Activity className="text-blue-400 w-8 h-8" />
+            <div className="bg-white/[0.03] border border-white/10 rounded-[2rem] p-8 flex flex-col justify-center items-center text-center">
+              <div className="w-full mb-6 flex justify-center">
+                {isRecording ? (
+                  <AudioVisualizer analyser={analyser} isRecording={isRecording} />
+                ) : (
+                  <div className="w-full h-24 bg-white/5 rounded-2xl flex items-center justify-center max-w-xs">
+                    <Activity className="text-slate-700 w-8 h-8" />
+                  </div>
+                )}
               </div>
-              <h3 className="text-xl font-medium mb-2">STAR Telemetry</h3>
+              <h3 className="text-xl font-medium mb-2">Acoustic Telemetry</h3>
               <p className="text-slate-500 text-sm max-w-xs leading-relaxed font-light">
-                Waiting for audio input to begin Situation, Task, Action, and Result categorization.
+                {isRecording ? "Visualizing raw frequency data for STAR analysis." : "Waiting for audio input initialization."}
               </p>
             </div>
             
-            <div className="bg-white/[0.03] border border-white/10 rounded-[2rem] p-8 flex flex-col justify-center items-center text-center group hover:bg-white/[0.05] transition-all">
-              <div className="w-16 h-16 bg-purple-500/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <MessageSquare className="text-purple-400 w-8 h-8" />
-              </div>
+            <div className="bg-white/[0.03] border border-white/10 rounded-[2rem] p-8 flex flex-col justify-center items-center text-center">
+              <MessageSquare className="text-purple-400 w-8 h-8 mb-6" />
               <h3 className="text-xl font-medium mb-2">Contextual Nudges</h3>
               <p className="text-slate-500 text-sm max-w-xs leading-relaxed font-light">
-                Real-time strategic advice based on your Job Description will appear in this feed.
+                Real-time strategic advice will appear here once audio processing begins.
               </p>
             </div>
           </div>
