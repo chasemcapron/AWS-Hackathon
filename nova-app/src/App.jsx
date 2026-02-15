@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, MicOff, Zap, Power, Activity, AlertCircle, ChevronDown, FileText, X, Upload, Check, MessageSquare, Plus, Trash2, Briefcase, CheckCircle2, Star, ChevronRight } from 'lucide-react';
+import { Mic, MicOff, Zap, Power, Activity, AlertCircle, ChevronDown, FileText, X, Upload, Check, MessageSquare, Plus, Trash2, Briefcase, CheckCircle2, Star, ChevronRight, User, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // --- HOOKS ---
@@ -169,6 +169,48 @@ const STARCompass = ({ progress }) => {
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
         <span className="text-xs font-bold tracking-widest text-slate-500">STAR</span>
       </div>
+    </div>
+  );
+};
+
+const TranscriptFeed = ({ transcript }) => {
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    // Only scroll if there are messages to avoid scrolling the whole page on initial load
+    if (transcript.length > 0) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [transcript]);
+
+  return (
+    <div className="w-full h-full overflow-y-auto px-4 space-y-4 no-scrollbar">
+      {transcript.length === 0 && (
+        <div className="h-full flex flex-col items-center justify-center text-slate-600 text-sm italic opacity-50">
+          <Activity size={32} className="mb-2" />
+          <span>Waiting for conversation...</span>
+        </div>
+      )}
+      {transcript.map((msg, i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+        >
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-white text-black' : 'bg-white/10 text-white'}`}>
+            {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+          </div>
+          <div className={`p-4 rounded-2xl max-w-[80%] text-sm leading-relaxed ${
+            msg.role === 'user' 
+              ? 'bg-white/10 text-slate-100 rounded-tr-none' 
+              : 'bg-black/40 border border-white/5 text-slate-300 rounded-tl-none'
+          }`}>
+            {msg.text}
+          </div>
+        </motion.div>
+      ))}
+      <div ref={bottomRef} />
     </div>
   );
 };
@@ -411,6 +453,17 @@ const ContextModal = ({ isOpen, onClose, jobs, activeJobId, onAddJob, onDeleteJo
   );
 };
 
+// --- MOCK SCRIPT DATA ---
+const MOCK_SCRIPT = [
+  { role: 'interviewer', text: "Tell me about a time you had to lead a project under tight deadlines." },
+  { role: 'user', text: "Sure. In my previous role at TechFlow, we had a critical deployment scheduled for Black Friday." },
+  { role: 'user', text: "I noticed our legacy pipeline was failing stress tests just 48 hours before launch." },
+  { role: 'user', text: "I immediately gathered the DevOps team, and we decided to implement a blue-green deployment strategy to mitigate risk." },
+  { role: 'interviewer', text: "How did you handle the team's stress during that time?" },
+  { role: 'user', text: "I kept communication clear and set up hourly check-ins. We rotated shifts so no one burned out." },
+  { role: 'user', text: "As a result, we launched on time with zero downtime, and the system handled 3x our normal traffic." }
+];
+
 // --- MAIN APP ---
 
 export default function App() {
@@ -418,11 +471,11 @@ export default function App() {
   
   const [starProgress, setStarProgress] = useState({ s: 0, t: 0, a: 0, r: 0 });
   const [nudges, setNudges] = useState([]);
+  const [transcript, setTranscript] = useState([]);
   const [isContextOpen, setIsContextOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [isJobSelectorOpen, setIsJobSelectorOpen] = useState(false);
   
-  // Job Context State
   const [jobs, setJobs] = useState([
     { id: 1, name: 'Google - Frontend', jd: '', resume: '' },
     { id: 2, name: 'Amazon - SDE II', jd: '', resume: '' }
@@ -432,10 +485,7 @@ export default function App() {
   const videoRef = useRef(null);
 
   useEffect(() => {
-    // Set Tab Name
     document.title = "NOVA";
-
-    // Set Tab Icon (Sparkle/Star Theme)
     const link = document.querySelector("link[rel~='icon']") || document.createElement('link');
     link.type = 'image/svg+xml';
     link.rel = 'icon';
@@ -452,7 +502,6 @@ export default function App() {
     setToastMessage(msg);
   };
 
-  // Job Management Handlers
   const handleAddJob = () => {
     const newId = Math.max(...jobs.map(j => j.id), 0) + 1;
     const newJob = { id: newId, name: 'New Interview', jd: '', resume: '' };
@@ -477,36 +526,41 @@ export default function App() {
 
   const activeJob = jobs.find(j => j.id === activeJobId);
 
-  // Mock Engine
+  // Mock Engine: Simulation of Transcript & Analysis
   useEffect(() => {
     let interval;
     if (isRecording) {
       console.log("Nova: Simulation Engine Active");
       let tick = 0;
+      let scriptIndex = 0;
       
       interval = setInterval(() => {
         tick++;
+        
+        // 1. Update Transcript
+        if (tick % 30 === 0 && scriptIndex < MOCK_SCRIPT.length) {
+            setTranscript(prev => [...prev, MOCK_SCRIPT[scriptIndex]]);
+            scriptIndex++;
+        }
+
+        // 2. Update STAR Rings
         setStarProgress(prev => ({
-          s: Math.min(prev.s + (Math.random() * 5), 100),
-          t: tick > 20 ? Math.min(prev.t + (Math.random() * 4), 100) : prev.t,
-          a: tick > 40 ? Math.min(prev.a + (Math.random() * 3), 100) : prev.a,
-          r: tick > 60 ? Math.min(prev.r + (Math.random() * 5), 100) : prev.r,
+          s: Math.min(prev.s + (Math.random() * 2), 100),
+          t: tick > 50 ? Math.min(prev.t + (Math.random() * 2), 100) : prev.t,
+          a: tick > 100 ? Math.min(prev.a + (Math.random() * 2), 100) : prev.a,
+          r: tick > 150 ? Math.min(prev.r + (Math.random() * 2), 100) : prev.r,
         }));
 
-        if (tick === 5) {
-          addNudge({ id: 1, title: "Situation Detected", message: "Good context setting. Keep it brief.", type: "info" });
-        }
-        if (tick === 25) {
-          addNudge({ id: 2, title: "Pace Warning", message: "Speaking speed increased. Pause for effect.", type: "alert" });
-        }
-        if (tick === 50) {
-          addNudge({ id: 3, title: "Action Highlight", message: "Excellent use of 'I led' instead of 'We'.", type: "info" });
-        }
+        // 3. Update Nudges
+        if (tick === 60) addNudge({ id: 1, title: "Situation Detected", message: "Good context setting.", type: "info" });
+        if (tick === 120) addNudge({ id: 2, title: "Pace Warning", message: "Slow down slightly.", type: "alert" });
+        if (tick === 180) addNudge({ id: 3, title: "Action Highlight", message: "Strong ownership verbs.", type: "info" });
 
-      }, 1000); 
+      }, 100); 
     } else {
       setStarProgress({ s: 0, t: 0, a: 0, r: 0 });
       setNudges([]);
+      setTranscript([]);
     }
 
     return () => clearInterval(interval);
@@ -531,14 +585,12 @@ export default function App() {
   return (
     <div className="bg-black text-slate-50 selection:bg-white/30 font-sans h-screen overflow-y-scroll snap-y snap-mandatory scroll-smooth relative">
       
-      {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
           <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
         )}
       </AnimatePresence>
 
-      {/* Context Modal */}
       <AnimatePresence>
         {isContextOpen && (
           <ContextModal 
@@ -555,7 +607,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* --- GLOBAL BACKGROUND VIDEO --- */}
       <div className="fixed inset-0 w-full h-full z-0 pointer-events-none">
           <div className="absolute inset-0 bg-black/20 z-10" /> 
           <video 
@@ -570,11 +621,7 @@ export default function App() {
           </video>
       </div>
 
-      {/* --- HERO SECTION --- */}
       <section className="min-h-screen relative flex flex-col items-center justify-center overflow-hidden snap-start shrink-0 z-10">
-        
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-white/5 rounded-full blur-[120px] animate-pulse pointer-events-none" />
-
         <motion.div 
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -601,7 +648,6 @@ export default function App() {
         </motion.div>
       </section>
 
-      {/* --- DASHBOARD SECTION --- */}
       <section id="dashboard" className="min-h-screen w-full flex items-center justify-center p-4 md:p-8 relative snap-start shrink-0 z-10">
         
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-white/5 rounded-full blur-[120px] animate-pulse pointer-events-none" />
@@ -612,13 +658,10 @@ export default function App() {
           whileInView={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
-          className="relative w-full max-w-6xl min-h-[85vh] h-auto bg-black/80 backdrop-blur-3xl border border-white/10 rounded-[3rem] shadow-2xl flex overflow-hidden z-10"
+          className="relative w-full max-w-7xl min-h-[85vh] h-auto bg-black/80 backdrop-blur-3xl border border-white/10 rounded-[3rem] shadow-2xl flex overflow-hidden z-10"
         >
           
-          {/* Sidebar Nav */}
           <div className="w-24 border-r border-white/5 flex flex-col items-center py-10 gap-10 bg-black/40">
-            {/* Removed Lightning Bolt Logo Area */}
-            
             <nav className="flex flex-col gap-8 flex-1 justify-center">
               <button 
                 onClick={toggleRecording}
@@ -629,7 +672,6 @@ export default function App() {
                 {isRecording ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
               </button>
               
-              {/* New Context Button */}
               <button 
                 onClick={() => setIsContextOpen(true)}
                 className="p-4 rounded-2xl text-slate-500 hover:text-white hover:bg-white/5 transition-all relative group"
@@ -639,7 +681,6 @@ export default function App() {
               </button>
             </nav>
 
-            {/* Reset/Refresh Button */}
             <button 
               onClick={() => window.location.reload()} 
               className="p-4 rounded-2xl text-slate-700 hover:text-red-400 cursor-pointer"
@@ -649,33 +690,30 @@ export default function App() {
             </button>
           </div>
 
-          {/* Main Interface */}
-          <div className="flex-1 flex flex-col p-8 md:p-14">
-            <header className="flex justify-between items-start mb-10 relative z-50">
+          <div className="flex-1 flex flex-col p-8 md:p-10">
+            <header className="flex justify-between items-start mb-8 relative z-50">
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="h-[1px] w-8 bg-white/30" />
                   <span className="text-white/50 text-xs font-bold tracking-[0.3em] uppercase">Intelligence System</span>
                 </div>
                 
-                {/* Active Job Selector Header */}
                 <div className="relative">
                   <h1 
-                    className="text-6xl font-extralight tracking-tight mb-4 text-white flex items-center gap-4 cursor-pointer group"
+                    className="text-5xl font-extralight tracking-tight mb-2 text-white flex items-center gap-4 cursor-pointer group"
                     onClick={() => setIsJobSelectorOpen(!isJobSelectorOpen)}
                   >
                     {activeJob?.name || "Select Position"}
-                    <ChevronDown size={32} className={`text-slate-500 group-hover:text-white transition-all transform ${isJobSelectorOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={28} className={`text-slate-500 group-hover:text-white transition-all transform ${isJobSelectorOpen ? 'rotate-180' : ''}`} />
                   </h1>
                   
-                  {/* Job Selector Dropdown */}
                   <AnimatePresence>
                     {isJobSelectorOpen && (
                       <motion.div 
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="absolute top-full left-0 w-80 bg-black/90 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden"
+                        className="absolute top-full left-0 w-80 bg-black/90 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden z-50"
                       >
                         <div className="p-2">
                           <div className="text-xs font-bold text-slate-500 uppercase tracking-widest px-4 py-2">Select Active Context</div>
@@ -710,10 +748,6 @@ export default function App() {
                     )}
                   </AnimatePresence>
                 </div>
-
-                <p className="text-slate-400 text-xl font-light max-w-lg leading-relaxed">
-                  {isRecording ? "Analyzing interview audio in real-time..." : "Your real-time interview telemetry. Click the mic to sync."}
-                </p>
               </div>
               
               <div className={`px-5 py-2.5 rounded-full border text-[10px] font-bold tracking-widest flex items-center gap-3 ${
@@ -724,47 +758,64 @@ export default function App() {
               </div>
             </header>
 
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-0">
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 h-full min-h-0">
               
-              {/* Left Col: STAR Telemetry & Audio (7 Cols) */}
-              <div className="lg:col-span-7 flex flex-col gap-6">
-                <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-[2rem] p-8 flex flex-col items-center justify-center relative overflow-hidden min-h-[300px]">
-                  <div className="flex items-center gap-12 z-10">
+              {/* LEFT COLUMN: Input & Transcript */}
+              <div className="flex flex-col gap-6 h-full min-h-0">
+                {/* Transcript Card */}
+                <div className="flex-1 bg-white/[0.02] border border-white/5 rounded-[2rem] p-4 flex flex-col relative overflow-hidden">
+                   <div className="flex items-center gap-3 mb-4 px-2">
+                      <Activity className="text-white w-4 h-4" />
+                      <h3 className="text-xs font-bold tracking-widest text-slate-400 uppercase">Live Transcript</h3>
+                   </div>
+                   <TranscriptFeed transcript={transcript} />
+                </div>
+
+                {/* Audio Visualizer (Smaller) */}
+                <div className="h-32 bg-white/[0.02] border border-white/5 rounded-[2rem] p-4 flex items-center justify-center">
+                   {isRecording ? (
+                    <AudioVisualizer analyser={analyser} isRecording={isRecording} />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 opacity-30">
+                      <Activity className="text-white" size={20} />
+                      <span className="text-[10px] tracking-widest text-white uppercase">Audio Offline</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* RIGHT COLUMN: Analysis */}
+              <div className="flex flex-col gap-6 h-full min-h-0">
+                {/* STAR Analysis */}
+                <div className="h-1/2 bg-white/[0.02] border border-white/5 rounded-[2rem] p-6 flex flex-col items-center justify-center relative overflow-hidden">
+                  <div className="absolute top-4 left-6 flex items-center gap-2">
+                      <Zap className="text-white w-4 h-4" />
+                      <h3 className="text-xs font-bold tracking-widest text-slate-400 uppercase">STAR Telemetry</h3>
+                  </div>
+                  <div className="flex items-center gap-8 z-10 mt-6">
                      <STARCompass progress={starProgress} />
-                     <div className="flex flex-col gap-4">
+                     <div className="flex flex-col gap-3">
                         {['Situation', 'Task', 'Action', 'Result'].map((label, i) => (
                           <div key={label} className="flex items-center gap-3">
-                            <div className={`w-2 h-2 rounded-full ${
+                            <div className={`w-1.5 h-1.5 rounded-full ${
                               ['bg-cyan-400', 'bg-blue-400', 'bg-purple-400', 'bg-green-400'][i]
                             }`} />
-                            <span className="text-sm font-medium text-slate-300">{label}</span>
+                            <span className="text-xs font-medium text-slate-300 w-16">{label}</span>
                             <span className="text-xs text-slate-500">{Math.round(Object.values(starProgress)[i])}%</span>
                           </div>
                         ))}
                      </div>
                   </div>
                 </div>
-
-                <div className="h-40 bg-white/[0.02] border border-white/5 rounded-[2rem] p-6 flex flex-col justify-center items-center">
-                   {isRecording ? (
-                    <AudioVisualizer analyser={analyser} isRecording={isRecording} />
-                  ) : (
-                    <div className="flex flex-col items-center gap-3 opacity-50">
-                      <Activity className="text-slate-500" />
-                      <span className="text-xs tracking-widest text-slate-600">AUDIO OFFLINE</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Right Col: Nudge Feed (5 Cols) */}
-              <div className="lg:col-span-5 bg-white/[0.02] border border-white/5 rounded-[2rem] p-6 flex flex-col relative min-h-[400px]">
-                <div className="flex items-center gap-3 mb-6 px-2">
-                  <MessageSquare className="text-white w-5 h-5" />
-                  <h3 className="text-sm font-bold tracking-widest text-slate-300">LIVE INSIGHTS</h3>
-                </div>
                 
-                <NudgeFeed nudges={nudges} />
+                {/* Nudge Feed */}
+                <div className="h-1/2 bg-white/[0.02] border border-white/5 rounded-[2rem] p-6 flex flex-col relative overflow-hidden">
+                  <div className="flex items-center gap-3 mb-4 px-2">
+                    <MessageSquare className="text-white w-4 h-4" />
+                    <h3 className="text-xs font-bold tracking-widest text-slate-400 uppercase">Live Insights</h3>
+                  </div>
+                  <NudgeFeed nudges={nudges} />
+                </div>
               </div>
 
             </div>
