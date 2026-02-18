@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, MicOff, Zap, Power, Activity, AlertCircle, ChevronDown, FileText, X, Upload, Check, MessageSquare, Plus, Trash2, Briefcase, CheckCircle2, Star, ChevronRight, User, Bot, Monitor, AlertTriangle, Mail, Download, BarChart2 } from 'lucide-react';
+import { Mic, MicOff, Zap, Power, Activity, AlertCircle, ChevronDown, FileText, X, Upload, Check, MessageSquare, Plus, Trash2, Briefcase, CheckCircle2, Star, ChevronRight, User, Bot, Monitor, AlertTriangle, Eye, Mail, Download, BarChart2, Building2, Globe, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // --- HOOKS ---
@@ -154,52 +154,6 @@ const AudioVisualizer = ({ analyser, isRecording, height = 80 }) => {
   );
 };
 
-const STARCompass = ({ progress, size = "large" }) => {
-  const rScale = size === "large" ? 1 : 0.6;
-  const strokeW = size === "large" ? 8 : 6;
-  
-  const rings = [
-    { label: 'Result', color: 'stroke-green-400', key: 'r', r: 90 * rScale },
-    { label: 'Action', color: 'stroke-purple-400', key: 'a', r: 70 * rScale },
-    { label: 'Task', color: 'stroke-blue-400', key: 't', r: 50 * rScale },
-    { label: 'Situation', color: 'stroke-cyan-400', key: 's', r: 30 * rScale },
-  ];
-
-  return (
-    <div className={`relative ${size === 'large' ? 'w-56 h-56' : 'w-40 h-40'} flex items-center justify-center`}>
-      <svg className="w-full h-full -rotate-90 transform">
-        {rings.map((ring, i) => {
-          const circumference = 2 * Math.PI * ring.r;
-          const offset = circumference - (progress[ring.key] / 100) * circumference;
-          
-          return (
-            <React.Fragment key={ring.key}>
-              <circle
-                cx="50%" cy="50%" r={ring.r}
-                fill="none"
-                className="stroke-white/10"
-                strokeWidth={strokeW}
-              />
-              <circle
-                cx="50%" cy="50%" r={ring.r}
-                fill="none"
-                className={`${ring.color} transition-all duration-1000 ease-out`}
-                strokeWidth={strokeW}
-                strokeDasharray={circumference}
-                strokeDashoffset={offset}
-                strokeLinecap="round"
-              />
-            </React.Fragment>
-          );
-        })}
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        <span className={`font-bold tracking-widest text-slate-500 ${size === 'large' ? 'text-xs' : 'text-[10px]'}`}>STAR</span>
-      </div>
-    </div>
-  );
-};
-
 const TranscriptFeed = ({ transcript }) => {
   const containerRef = useRef(null);
 
@@ -228,7 +182,7 @@ const TranscriptFeed = ({ transcript }) => {
           className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
         >
           <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-white text-black' : 'bg-white/10 text-white'}`}>
-            {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+            {msg.role === 'user' ? <User size={16} /> : <Briefcase size={16} />}
           </div>
           <div className={`p-4 rounded-2xl max-w-[80%] text-sm leading-relaxed ${
             msg.role === 'user' 
@@ -243,132 +197,124 @@ const TranscriptFeed = ({ transcript }) => {
   );
 };
 
-const NudgeFeed = ({ nudges }) => {
-  const containerRef = useRef(null);
-  
-  useEffect(() => {
-    if (containerRef.current && nudges.length > 0) {
-        containerRef.current.scrollTo({
-            top: containerRef.current.scrollHeight,
-            behavior: 'smooth'
-        });
-    }
-  }, [nudges]);
-
+const RecommendedQuestions = ({ questions }) => {
   return (
-    <div ref={containerRef} className="flex-1 overflow-y-auto px-2 space-y-4 no-scrollbar min-h-0 relative">
+    <div className="flex-1 overflow-y-auto px-2 space-y-3 no-scrollbar min-h-0 relative">
       <AnimatePresence mode='popLayout'>
-        {nudges.map((nudge) => (
+        {questions.map((q) => (
           <motion.div
-            key={nudge.id}
+            key={q.id}
             initial={{ opacity: 0, x: 50, scale: 0.9 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            className={`p-4 rounded-2xl border backdrop-blur-md flex gap-3 shadow-lg ${
-              nudge.type === 'alert' 
-                ? 'bg-red-500/10 border-red-500/20' 
-                : 'bg-white/5 border-white/10'
-            }`}
+            className={`p-4 rounded-2xl border backdrop-blur-md flex gap-3 shadow-lg bg-blue-500/10 border-blue-500/20`}
           >
-            <div className={`mt-1 ${nudge.type === 'alert' ? 'text-red-400' : 'text-white'}`}>
-              {nudge.type === 'alert' ? <AlertCircle size={18} /> : <Zap size={18} />}
+            <div className={`mt-1 text-blue-400`}>
+              <MessageSquare size={18} />
             </div>
             <div>
-              <h4 className={`text-sm font-semibold mb-1 ${nudge.type === 'alert' ? 'text-red-200' : 'text-slate-200'}`}>
-                {nudge.title}
+              <h4 className={`text-sm font-semibold mb-1 text-blue-200`}>
+                Recommended Ask
               </h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                {nudge.message}
+              <p className="text-xs text-slate-300 leading-relaxed font-light">
+                "{q.text}"
               </p>
             </div>
           </motion.div>
         ))}
       </AnimatePresence>
-      {nudges.length === 0 && (
-        <div className="h-full flex items-center justify-center text-slate-600 text-sm italic">
-          Waiting for context...
+      {questions.length === 0 && (
+        <div className="h-full flex flex-col items-center justify-center text-slate-600 text-sm italic gap-2">
+           <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center">
+             <Bot size={20} className="opacity-50" />
+           </div>
+           <span>Listening for context...</span>
         </div>
       )}
     </div>
   );
 };
 
-const ContextModal = ({ isOpen, onClose, jobs, activeJobId, onAddJob, onDeleteJob, onSelectJob, onUpdateJob, onSuccess }) => {
-    const [activeTab, setActiveTab] = useState('jd'); 
+const ContextModal = ({ isOpen, onClose, companies, activeCompanyId, onAddCompany, onDeleteCompany, onSelectCompany, onUpdateCompany, onSuccess }) => {
     const fileInputRef = useRef(null);
     if (!isOpen) return null;
-    const activeJob = jobs.find(j => j.id === activeJobId);
-    const currentContent = activeJob?.[activeTab === 'jd' ? 'jd' : 'resume'];
-    const isPdf = currentContent && currentContent.startsWith('blob:');
+    const activeCompany = companies.find(c => c.id === activeCompanyId);
+    const currentContent = activeCompany?.context;
+    
     const handleDragOver = (e) => { e.preventDefault(); e.stopPropagation(); };
-    const processFile = (file, field) => {
+    const processFile = (file) => {
         if (file.type === 'application/pdf') {
             const url = URL.createObjectURL(file);
-            onUpdateJob(activeJobId, field, url);
-            onSuccess(`${field === 'jd' ? 'Job Description' : 'Resume'} uploaded`);
+            onUpdateCompany(activeCompanyId, 'context', url); // In real app, this would parse PDF text
+            onSuccess(`Context uploaded for ${activeCompany.name}`);
         } else {
             const reader = new FileReader();
             reader.onload = (event) => {
-                onUpdateJob(activeJobId, field, event.target.result);
-                onSuccess("File context loaded");
+                onUpdateCompany(activeCompanyId, 'context', event.target.result);
+                onSuccess("Context loaded");
             };
             reader.readAsText(file);
         }
     };
-    const handleDrop = (e, field) => {
+    const handleDrop = (e) => {
         e.preventDefault(); e.stopPropagation();
         if (e.dataTransfer.types.includes('text/plain')) {
             const text = e.dataTransfer.getData('text/plain');
-            onUpdateJob(activeJobId, field, text);
-            onSuccess("Text context updated");
+            onUpdateCompany(activeCompanyId, 'context', text);
+            onSuccess("Context updated");
             return;
         }
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            processFile(e.dataTransfer.files[0], field);
+            processFile(e.dataTransfer.files[0]);
         }
     };
     const handleFileInput = (e) => {
         if (e.target.files && e.target.files.length > 0) {
-            processFile(e.target.files[0], activeTab === 'jd' ? 'jd' : 'resume');
+            processFile(e.target.files[0]);
         }
     };
+
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
         <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-4xl bg-black/90 border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex h-[80vh]">
             <div className="w-1/3 border-r border-white/10 bg-black/40 flex flex-col backdrop-blur-xl">
                 <div className="p-6 border-b border-white/10">
-                    <h2 className="text-lg font-light text-white tracking-wide mb-4">Context <span className="font-semibold">Library</span></h2>
-                    <button onClick={onAddJob} className="w-full py-2 px-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"><Plus size={16} /> New Interview</button>
+                    <h2 className="text-lg font-light text-white tracking-wide mb-4">Target <span className="font-semibold">Companies</span></h2>
+                    <button onClick={onAddCompany} className="w-full py-2 px-4 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"><Plus size={16} /> Add Target</button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                    {jobs.map(job => (
-                        <div key={job.id} onClick={() => onSelectJob(job.id)} className={`p-3 rounded-xl cursor-pointer group flex items-center justify-between transition-all ${activeJobId === job.id ? 'bg-white/10 border border-white/20' : 'hover:bg-white/5 border border-transparent'}`}>
+                    {companies.map(c => (
+                        <div key={c.id} onClick={() => onSelectCompany(c.id)} className={`p-3 rounded-xl cursor-pointer group flex items-center justify-between transition-all ${activeCompanyId === c.id ? 'bg-white/10 border border-white/20' : 'hover:bg-white/5 border border-transparent'}`}>
                             <div className="flex items-center gap-3 overflow-hidden">
-                                {activeJobId === job.id ? <Star size={16} className="text-yellow-400 fill-yellow-400" /> : <Briefcase size={16} className="text-slate-500" />}
-                                <span className={`text-sm truncate ${activeJobId === job.id ? 'text-white font-medium' : 'text-slate-400'}`}>{job.name || "Untitled Interview"}</span>
+                                {activeCompanyId === c.id ? <Building2 size={16} className="text-blue-400" /> : <Briefcase size={16} className="text-slate-500" />}
+                                <span className={`text-sm truncate ${activeCompanyId === c.id ? 'text-white font-medium' : 'text-slate-400'}`}>{c.name || "Untitled"}</span>
                             </div>
-                            {jobs.length > 1 && (<button onClick={(e) => { e.stopPropagation(); onDeleteJob(job.id); }} className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-opacity"><Trash2 size={14} /></button>)}
+                            {companies.length > 1 && (<button onClick={(e) => { e.stopPropagation(); onDeleteCompany(c.id); }} className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-opacity"><Trash2 size={14} /></button>)}
                         </div>
                     ))}
                 </div>
             </div>
             <div className="flex-1 flex flex-col bg-black/60">
                 <div className="p-6 border-b border-white/10 flex justify-between items-center bg-black/20">
-                    <input type="text" value={activeJob?.name} onChange={(e) => onUpdateJob(activeJobId, 'name', e.target.value)} className="bg-transparent text-xl font-medium text-white placeholder-slate-600 focus:outline-none w-full" placeholder="Company / Role Name" />
+                    <input type="text" value={activeCompany?.name} onChange={(e) => onUpdateCompany(activeCompanyId, 'name', e.target.value)} className="bg-transparent text-xl font-medium text-white placeholder-slate-600 focus:outline-none w-full" placeholder="Company Name" />
                     <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors ml-4"><X size={24} /></button>
                 </div>
-                <div className="flex border-b border-white/5">
-                <button onClick={() => setActiveTab('jd')} className={`flex-1 p-4 text-sm font-medium transition-colors ${activeTab === 'jd' ? 'text-white bg-white/10 border-b-2 border-white' : 'text-slate-500 hover:text-slate-300'}`}>Job Description</button>
-                <button onClick={() => setActiveTab('resume')} className={`flex-1 p-4 text-sm font-medium transition-colors ${activeTab === 'resume' ? 'text-white bg-white/10 border-b-2 border-white' : 'text-slate-500 hover:text-slate-300'}`}>Resume</button>
-                </div>
                 <div className="p-6 flex-1 flex flex-col overflow-hidden bg-black/40">
-                    <div className="relative group flex-1 flex flex-col" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, activeTab === 'jd' ? 'jd' : 'resume')}>
-                        {isPdf ? (<div className="flex-1 relative bg-white/5 rounded-2xl overflow-hidden border border-white/10"><iframe src={currentContent} className="w-full h-full" title="Document Viewer" /><button onClick={() => onUpdateJob(activeJobId, activeTab === 'jd' ? 'jd' : 'resume', '')} className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-red-500/50 rounded-full transition-colors text-white z-10"><Trash2 size={16} /></button></div>) : activeTab === 'resume' ? (<div onClick={() => fileInputRef.current?.click()} className="flex-1 w-full bg-transparent border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 hover:border-white/30 transition-all group"><input type="file" ref={fileInputRef} className="hidden" accept=".pdf,.txt,.doc,.docx" onChange={handleFileInput} /><Upload className="mb-4 text-slate-500 group-hover:text-white transition-colors" size={48} /><p className="text-slate-400 font-medium">Click to Upload Resume</p><p className="text-slate-600 text-sm mt-2">or Drag & Drop PDF/TXT</p></div>) : (<textarea className="flex-1 w-full bg-transparent border-2 border-white/10 rounded-2xl p-6 text-slate-300 placeholder-slate-500 focus:outline-none focus:border-white/20 transition-all resize-none" placeholder="Paste Job Description text here..." value={currentContent || ''} onChange={(e) => onUpdateJob(activeJobId, 'jd', e.target.value)} />)}
+                    <div className="relative group flex-1 flex flex-col" onDragOver={handleDragOver} onDrop={handleDrop}>
+                         <div className={`absolute inset-0 border-2 border-dashed border-white/10 rounded-2xl pointer-events-none transition-colors ${currentContent ? 'opacity-0' : 'opacity-100 group-hover:border-white/30'}`} />
+                         <textarea className="flex-1 w-full bg-transparent border-none p-4 text-slate-300 placeholder-slate-600 focus:outline-none resize-none z-10" placeholder="Paste Company Context, Website URL, or Drag PDF here..." value={currentContent || ''} onChange={(e) => onUpdateCompany(activeCompanyId, 'context', e.target.value)} />
+                         {(!currentContent) && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <div className="text-center text-slate-600">
+                                    <Upload className="mx-auto mb-2 opacity-50" size={24} />
+                                    <span className="text-xs uppercase tracking-widest">Drag & Drop Context</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
                 <div className="p-4 border-t border-white/10 flex justify-end gap-3 bg-black/20">
-                    <span className="mr-auto text-xs text-slate-500 flex items-center">{activeJob?.jd ? <Check size={12} className="mr-1 text-green-500"/> : null} Description<span className="mx-2">|</span>{activeJob?.resume ? <Check size={12} className="mr-1 text-green-500"/> : null} Resume</span>
-                    <button onClick={() => onSuccess("Changes saved")} className="px-6 py-2 rounded-xl text-sm font-medium bg-white text-black hover:bg-slate-200 transition-colors flex items-center gap-2"><Check size={16} /> Save Changes</button>
+                    <button onClick={() => onSuccess("Context Saved")} className="px-6 py-2 rounded-xl text-sm font-medium bg-white text-black hover:bg-slate-200 transition-colors flex items-center gap-2"><Check size={16} /> Save Changes</button>
                 </div>
             </div>
         </motion.div>
@@ -376,37 +322,80 @@ const ContextModal = ({ isOpen, onClose, jobs, activeJobId, onAddJob, onDeleteJo
     );
 };
 
-const AfterglowReport = ({ isOpen, onClose, starStats, onSendEmail }) => {
+const AfterglowReport = ({ isOpen, onClose, onSendEmail }) => {
     const [isEmailOpen, setIsEmailOpen] = useState(false);
-    const [emailBody, setEmailBody] = useState(`Dear Hiring Manager,\n\nThank you for taking the time to interview me today. I really enjoyed discussing the role and learning more about the team's upcoming projects.\n\nI am confident that my experience with [Your Skill] aligns perfectly with what you are looking for.\n\nBest regards,\n[Your Name]`);
+    const [emailBody, setEmailBody] = useState(`Subject: Partnership Opportunity - Texas A&M University\n\nDear [Name],\n\nThank you for taking the time to speak with me today regarding potential collaboration with Texas A&M. I was impressed by your company's innovative approach to [Topic Discussed].\n\nBased on our conversation, I believe there is strong alignment for a strategic partnership, particularly in [Area].\n\nI will follow up next week with a formal proposal.\n\nBest regards,\n[Your Name]`);
 
     if (!isOpen) return null;
 
     const handleDownloadReport = () => {
-        const reportContent = `
-NOVA INTERVIEW REPORT
----------------------
-Session Date: ${new Date().toLocaleDateString()}
+        // TODO: This HTML structure will be populated by AWS Bedrock response in the real implementation.
+        // For now, it uses the hardcoded summary matching the mock script.
+        const reportHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #333; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 40px; }
+                    .header { border-bottom: 3px solid #500000; padding-bottom: 20px; margin-bottom: 30px; }
+                    .logo-text { font-size: 24px; font-weight: bold; color: #500000; letter-spacing: 1px; }
+                    .title { font-size: 28px; margin-bottom: 10px; color: #111; }
+                    .meta { font-size: 14px; color: #666; margin-bottom: 30px; }
+                    .section { margin-bottom: 25px; }
+                    .section-title { font-size: 18px; font-weight: bold; color: #500000; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 15px; }
+                    .metric-box { background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 10px; }
+                    .metric { display: flex; justify-content: space-between; margin-bottom: 5px; }
+                    .footer { margin-top: 50px; font-size: 12px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div class="logo-text">TEXAS A&M UNIVERSITY</div>
+                    <div style="font-size: 14px; color: #555;">Partnership Development Office</div>
+                </div>
 
-STAR ANALYSIS SCORES:
----------------------
-Situation: ${Math.round(starStats.s)}%
-Task:      ${Math.round(starStats.t)}%
-Action:    ${Math.round(starStats.a)}%
-Result:    ${Math.round(starStats.r)}%
+                <div class="title">Strategic Partnership Executive Summary</div>
+                <div class="meta">Generated by NOVA Intelligence | Session Date: ${new Date().toLocaleDateString()}</div>
 
-FEEDBACK SUMMARY:
------------------
-- Context Setting: Strong (85%)
-- Pacing: Monitor speaking rate during Action segments.
-- Clarity: Good use of ownership verbs.
-        `.trim();
+                <div class="section">
+                    <div class="section-title">Analysis Overview</div>
+                    <div class="metric-box">
+                        <div class="metric"><strong>Company Target:</strong> TechFlow Corp</div>
+                        <div class="metric"><strong>Partnership Potential:</strong> <span style="color: green; font-weight: bold;">HIGH</span></div>
+                        <div class="metric"><strong>Primary Alignment:</strong> Research & Innovation</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Key Discussion Alignments</div>
+                    <ul>
+                        <li><strong>Renewable Energy Research:</strong> Strong mutual interest in solar efficiency and battery storage.</li>
+                        <li><strong>Innovation Grants:</strong> Potential for Q3 joint funding application.</li>
+                        <li><strong>Talent Pipeline:</strong> TechFlow showed interest in engineering internships.</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Action Items</div>
+                    <ol>
+                        <li>Send formal proposal regarding the Solid-State Battery Pilot Program by Friday.</li>
+                        <li>Schedule follow-up with TechFlow's CTO.</li>
+                        <li>Draft MOU for internship program.</li>
+                    </ol>
+                </div>
+
+                <div class="footer">
+                    CONFIDENTIAL - Internal Use Only. Generated by NOVA OS.
+                </div>
+            </body>
+            </html>
+        `;
 
         const element = document.createElement("a");
-        const file = new Blob([reportContent], {type: 'text/plain'});
+        const file = new Blob([reportHTML], {type: 'text/html'}); // Changed to HTML for formatting
         element.href = URL.createObjectURL(file);
-        element.download = "Nova_Interview_Report.txt";
-        document.body.appendChild(element); // Required for this to work in FireFox
+        element.download = "Partnership_Summary_Report.html";
+        document.body.appendChild(element); 
         element.click();
         document.body.removeChild(element);
     };
@@ -431,7 +420,7 @@ FEEDBACK SUMMARY:
                         onChange={(e) => setEmailBody(e.target.value)}
                     />
                     <div className="flex justify-end gap-3">
-                        <button onClick={() => window.open(`mailto:?subject=Thank You - Interview Follow Up&body=${encodeURIComponent(emailBody)}`)} className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center gap-2">
+                        <button onClick={() => window.open(`mailto:?subject=Partnership Follow Up&body=${encodeURIComponent(emailBody)}`)} className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center gap-2">
                             <Mail size={16} /> Open in Mail App
                         </button>
                     </div>
@@ -443,66 +432,34 @@ FEEDBACK SUMMARY:
                 >
                     <div className="p-8 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-blue-900/20 to-purple-900/20">
                         <div>
-                            <h2 className="text-3xl font-light text-white tracking-wide mb-1">Session <span className="font-semibold text-blue-400">Complete</span></h2>
-                            <p className="text-slate-400 text-sm">Here is your performance summary.</p>
+                            <h2 className="text-3xl font-light text-white tracking-wide mb-1">Partnership <span className="font-semibold text-blue-400">Log</span></h2>
+                            <p className="text-slate-400 text-sm">Summary of discussion points and next steps.</p>
                         </div>
                         <button onClick={onClose} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors text-white">
                             <X size={20} />
                         </button>
                     </div>
                     
-                    <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="flex flex-col items-center justify-center bg-white/5 rounded-2xl p-6 border border-white/5">
-                            <STARCompass progress={starStats} size="small" />
-                            <div className="mt-6 w-full space-y-3">
-                                {['Situation', 'Task', 'Action', 'Result'].map((label, i) => (
-                                    <div key={label} className="flex justify-between items-center">
-                                        <span className="text-slate-400 text-sm">{label}</span>
-                                        <div className="flex-1 mx-4 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                            <div 
-                                                className={`h-full rounded-full ${['bg-cyan-400', 'bg-blue-400', 'bg-purple-400', 'bg-green-400'][i]}`} 
-                                                style={{ width: `${Math.round(Object.values(starStats)[i])}%` }}
-                                            />
-                                        </div>
-                                        <span className="text-white font-mono text-xs">{Math.round(Object.values(starStats)[i])}%</span>
-                                    </div>
-                                ))}
-                            </div>
+                    <div className="p-8 flex flex-col gap-6">
+                        <div className="bg-white/5 rounded-2xl p-6 border border-white/5">
+                            <h4 className="text-white font-medium mb-4 flex items-center gap-2"><CheckCircle2 className="text-green-400" size={18}/> Key Alignments Identified</h4>
+                            <ul className="space-y-2 text-slate-300 text-sm">
+                                <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5" /> Joint Research Initiatives</li>
+                                <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5" /> Internship Pipeline Development</li>
+                                <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5" /> Q3 Innovation Grant</li>
+                            </ul>
                         </div>
 
-                        <div className="flex flex-col gap-4">
-                            <div className="flex-1 bg-white/5 rounded-2xl p-6 border border-white/5 flex flex-col justify-center gap-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center text-green-400">
-                                        <CheckCircle2 size={24} />
-                                    </div>
-                                    <div>
-                                        <h4 className="text-white font-medium">Strong Context</h4>
-                                        <p className="text-xs text-slate-400">You set the scene effectively in 85% of answers.</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400">
-                                        <Activity size={24} />
-                                    </div>
-                                    <div>
-                                        <h4 className="text-white font-medium">Pace Check</h4>
-                                        <p className="text-xs text-slate-400">Speaking rate spiked during "Action" segments.</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex gap-3">
-                                <button 
-                                    onClick={handleDownloadReport}
-                                    className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-slate-300 font-medium flex items-center justify-center gap-2 transition-colors"
-                                >
-                                    <Download size={16} /> PDF Report
-                                </button>
-                                <button onClick={() => setIsEmailOpen(true)} className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-medium flex items-center justify-center gap-2 transition-colors shadow-lg shadow-blue-900/20">
-                                    <Mail size={16} /> Draft Email
-                                </button>
-                            </div>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={handleDownloadReport}
+                                className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-slate-300 font-medium flex items-center justify-center gap-2 transition-colors"
+                            >
+                                <Download size={16} /> Save Summary
+                            </button>
+                            <button onClick={() => setIsEmailOpen(true)} className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-medium flex items-center justify-center gap-2 transition-colors shadow-lg shadow-blue-900/20">
+                                <Mail size={16} /> Follow Up
+                            </button>
                         </div>
                     </div>
                 </motion.div>
@@ -511,15 +468,14 @@ FEEDBACK SUMMARY:
     );
 };
 
-// --- MOCK SCRIPT DATA ---
+// --- MOCK SCRIPT DATA (Interviewer Mode) ---
 const MOCK_SCRIPT = [
-  { role: 'interviewer', text: "Tell me about a time you had to lead a project under tight deadlines." },
-  { role: 'user', text: "Sure. In my previous role at TechFlow, we had a critical deployment scheduled for Black Friday." },
-  { role: 'user', text: "I noticed our legacy pipeline was failing stress tests just 48 hours before launch." },
-  { role: 'user', text: "I immediately gathered the DevOps team, and we decided to implement a blue-green deployment strategy to mitigate risk." },
-  { role: 'interviewer', text: "How did you handle the team's stress during that time?" },
-  { role: 'user', text: "I kept communication clear and set up hourly check-ins. We rotated shifts so no one burned out." },
-  { role: 'user', text: "As a result, we launched on time with zero downtime, and the system handled 3x our normal traffic." }
+  { role: 'user', text: "Thanks for meeting today. I'm representing Texas A&M to discuss potential research partnerships." },
+  { role: 'bot', text: "It's great to meet you. We've been looking to expand our academic collaborations, especially in renewable energy." },
+  { role: 'user', text: "That aligns perfectly. Our engineering department just launched a new solar efficiency lab." },
+  { role: 'bot', text: "That's very interesting. We are currently facing challenges with battery storage for solar grids." },
+  { role: 'user', text: "We have a dedicated team working on solid-state battery tech. Would that be of interest?" },
+  { role: 'bot', text: "Absolutely. If you have any preliminary data, we'd love to review it for a pilot program." }
 ];
 
 // --- MAIN APP ---
@@ -527,29 +483,23 @@ const MOCK_SCRIPT = [
 export default function App() {
   const { isRecording, analyser, startRecording, stopRecording } = useAudioCapture();
   
-  // State for Visualization Simulation
-  const [starProgress, setStarProgress] = useState({ s: 0, t: 0, a: 0, r: 0 });
-  const [nudges, setNudges] = useState([]);
+  const [questions, setQuestions] = useState([]);
   const [transcript, setTranscript] = useState([]);
   const [isContextOpen, setIsContextOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
-  const [isJobSelectorOpen, setIsJobSelectorOpen] = useState(false);
+  const [isCompanySelectorOpen, setIsCompanySelectorOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   
-  // App Modes
-  const [mode, setMode] = useState('live'); // 'live' | 'mock'
   const [showHud, setShowHud] = useState(false);
-  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [hudStream, setHudStream] = useState(null);
   
-  const [jobs, setJobs] = useState([
-    { id: 1, name: 'Google - Frontend', jd: '', resume: '' },
-    { id: 2, name: 'Amazon - SDE II', jd: '', resume: '' }
+  const [companies, setCompanies] = useState([
+    { id: 1, name: 'TechFlow Corp', context: '' },
+    { id: 2, name: 'Global Energy', context: '' }
   ]);
-  const [activeJobId, setActiveJobId] = useState(1);
+  const [activeCompanyId, setActiveCompanyId] = useState(1);
 
   const videoRef = useRef(null);
-  const hudVideoRef = useRef(null);
 
   useEffect(() => {
     document.title = "NOVA";
@@ -569,110 +519,101 @@ export default function App() {
     setToastMessage({ msg, type });
   };
 
-  // Job Management Handlers
-  const handleAddJob = () => {
-    const newId = Math.max(...jobs.map(j => j.id), 0) + 1;
-    const newJob = { id: newId, name: 'New Interview', jd: '', resume: '' };
-    setJobs([...jobs, newJob]);
-    setActiveJobId(newId);
-    triggerToast("New Interview Profile Created");
+  const handleAddCompany = () => {
+    const newId = Math.max(...companies.map(c => c.id), 0) + 1;
+    const newCo = { id: newId, name: 'New Target', context: '' };
+    setCompanies([...companies, newCo]);
+    setActiveCompanyId(newId);
+    triggerToast("New Company Target Added");
   };
 
-  const handleDeleteJob = (id) => {
-    if (jobs.length > 1) {
-        const newJobs = jobs.filter(j => j.id !== id);
-        setJobs(newJobs);
-        if (activeJobId === id) setActiveJobId(newJobs[0].id);
+  const handleDeleteCompany = (id) => {
+    if (companies.length > 1) {
+        const newCos = companies.filter(c => c.id !== id);
+        setCompanies(newCos);
+        if (activeCompanyId === id) setActiveCompanyId(newCos[0].id);
     }
   };
 
-  const handleUpdateJob = (id, field, value) => {
-    setJobs(jobs.map(job => 
-        job.id === id ? { ...job, [field]: value } : job
+  const handleUpdateCompany = (id, field, value) => {
+    setCompanies(companies.map(c => 
+        c.id === id ? { ...c, [field]: value } : c
     ));
   };
 
-  const activeJob = jobs.find(j => j.id === activeJobId);
+  const activeCompany = companies.find(c => c.id === activeCompanyId);
 
-  // HUD Logic - Using "showHud" state and manual fallback for preview compatibility
-  const toggleHud = () => {
-    // Simply toggle visibility so user can take a manual screenshot
-    // The browser's screen capture API is restricted in this environment
-    setShowHud((prev) => !prev);
+  const toggleHud = async () => {
+    if (showHud) {
+        if (hudStream) {
+            hudStream.getTracks().forEach(track => track.stop());
+            setHudStream(null);
+        }
+        setShowHud(false);
+    } else {
+        try {
+            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+            setHudStream(stream);
+            setShowHud(true);
+            
+            stream.getVideoTracks()[0].onended = () => {
+                setShowHud(false);
+                setHudStream(null);
+            };
+        } catch (err) {
+            console.error("Screen capture failed:", err);
+            triggerToast("Could not access screen share", 'alert');
+            setShowHud(true); 
+        }
+    }
   };
 
-  // Panic Button Logic
   const handlePanic = () => {
-      triggerToast("Panic Assist Activated: Analyzing...", 'alert');
+      triggerToast("Generating Bridge Question...", 'alert');
       setTimeout(() => {
-          addNudge({ id: Date.now(), title: "Emergency Stall", message: "Say: 'That's a great question. Let me take a second to structure my thoughts.'", type: "alert" });
+          addQuestion({ id: Date.now(), text: "Could you elaborate on how this initiative aligns with your Q4 sustainability goals?" });
       }, 1000);
   };
 
-  // Mock Engine: Simulation of Transcript & Analysis
   useEffect(() => {
     let interval;
     if (isRecording) {
-      console.log("Nova: Simulation Engine Active");
       let tick = 0;
       let scriptIndex = 0;
       
       interval = setInterval(() => {
         tick++;
         
-        // 1. Update Transcript & AI Speaking State (Stability Fix)
-        if (tick % 30 === 0) {
+        if (tick % 40 === 0) {
             if (scriptIndex < MOCK_SCRIPT.length) {
                 const msg = MOCK_SCRIPT[scriptIndex];
                 setTranscript(prev => [...prev, msg]);
-                
-                // If in Mock Mode, animate avatar based on who is talking
-                if (mode === 'mock') {
-                    setIsAiSpeaking(msg.role === 'interviewer');
-                }
-                
                 scriptIndex++;
-            } else {
-                // Script finished
-                setIsAiSpeaking(false);
             }
         }
 
-        // 2. Update STAR Rings
-        setStarProgress(prev => ({
-          s: Math.min(prev.s + (Math.random() * 2), 100),
-          t: tick > 50 ? Math.min(prev.t + (Math.random() * 2), 100) : prev.t,
-          a: tick > 100 ? Math.min(prev.a + (Math.random() * 2), 100) : prev.a,
-          r: tick > 150 ? Math.min(prev.r + (Math.random() * 2), 100) : prev.r,
-        }));
-
-        // 3. Update Nudges
-        if (tick === 60) addNudge({ id: 1, title: "Situation Detected", message: "Good context setting.", type: "info" });
-        if (tick === 120) addNudge({ id: 2, title: "Pace Warning", message: "Slow down slightly.", type: "alert" });
-        if (tick === 180) addNudge({ id: 3, title: "Action Highlight", message: "Strong ownership verbs.", type: "info" });
+        if (tick === 80) addQuestion({ id: 1, text: "Ask about: Specific battery chemistry requirements." });
+        if (tick === 160) addQuestion({ id: 2, text: "Propose: A joint grant application for the pilot." });
 
       }, 100); 
     } else {
-        // Stop recording reset is handled by toggleRecording now
-        setIsAiSpeaking(false);
+        // Reset handled by toggle
     }
 
     return () => clearInterval(interval);
-  }, [isRecording, mode]);
+  }, [isRecording]);
 
-  const addNudge = (nudge) => {
-    setNudges(prev => [nudge, ...prev]);
+  const addQuestion = (q) => {
+    setQuestions(prev => [q, ...prev]);
   };
 
   const toggleRecording = () => {
     if (isRecording) {
         stopRecording();
-        setIsReportOpen(true); // Open report on stop
+        setIsReportOpen(true); 
     } else {
         startRecording();
-        // Reset state for new session
-        setStarProgress({ s: 0, t: 0, a: 0, r: 0 });
-        setNudges([]);
+        setQuestions([]);
         setTranscript([]);
     }
   };
@@ -687,42 +628,37 @@ export default function App() {
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden font-sans select-none">
       
-      {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
           <Toast message={toastMessage.msg} type={toastMessage.type} onClose={() => setToastMessage(null)} />
         )}
       </AnimatePresence>
 
-      {/* Context Modal */}
       <AnimatePresence>
         {isContextOpen && (
           <ContextModal 
             isOpen={isContextOpen} 
             onClose={() => setIsContextOpen(false)}
-            jobs={jobs}
-            activeJobId={activeJobId}
-            onAddJob={handleAddJob}
-            onDeleteJob={handleDeleteJob}
-            onSelectJob={setActiveJobId}
-            onUpdateJob={handleUpdateJob}
+            companies={companies}
+            activeCompanyId={activeCompanyId}
+            onAddCompany={handleAddCompany}
+            onDeleteCompany={handleDeleteCompany}
+            onSelectCompany={setActiveCompanyId}
+            onUpdateCompany={handleUpdateCompany}
             onSuccess={(msg) => triggerToast(msg)}
           />
         )}
       </AnimatePresence>
 
-      {/* AFTERGLOW REPORT MODAL */}
       <AnimatePresence>
         {isReportOpen && (
           <AfterglowReport 
             isOpen={isReportOpen} 
             onClose={() => setIsReportOpen(false)} 
-            starStats={starProgress}
           />
         )}
       </AnimatePresence>
 
-      {/* --- GLOBAL BACKGROUND VIDEO --- */}
       <div className="fixed inset-0 w-full h-full z-0 pointer-events-none">
           <div className="absolute inset-0 bg-black/20 z-10" /> 
           <video 
@@ -737,10 +673,8 @@ export default function App() {
           </video>
       </div>
 
-      {/* SCROLL CONTAINER */}
       <div className="h-full overflow-y-scroll snap-y snap-mandatory scroll-smooth relative z-10">
         
-        {/* --- HERO SECTION --- */}
         <section className="min-h-screen relative flex flex-col items-center justify-center overflow-hidden snap-start shrink-0 z-10">
             <motion.div 
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -752,7 +686,7 @@ export default function App() {
                 NOVA
             </h1>
             <p className="text-white/60 text-sm md:text-xl font-light tracking-[0.8em] uppercase mt-[-1rem] md:mt-[-2rem] drop-shadow-md">
-                The Interview Intelligence
+                Partnership Intelligence
             </p>
             </motion.div>
 
@@ -768,7 +702,6 @@ export default function App() {
             </motion.div>
         </section>
 
-        {/* --- DASHBOARD SECTION --- */}
         <section id="dashboard" className="min-h-screen w-full flex items-center justify-center p-4 md:p-8 relative snap-start shrink-0 z-10">
             
             <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-white/5 rounded-full blur-[120px] animate-pulse pointer-events-none" />
@@ -779,12 +712,10 @@ export default function App() {
             whileInView={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
-            className="relative w-full max-w-7xl min-h-[85vh] h-auto bg-black/80 backdrop-blur-3xl border border-white/10 rounded-[3rem] flex flex-col overflow-hidden z-10 shadow-2xl"
+            className="relative w-full max-w-7xl min-h-[85vh] h-auto bg-black/80 backdrop-blur-3xl border border-white/10 rounded-[3rem] flex flex-col overflow-hidden z-10 shadow-2xl transition-all duration-500 border-white/10 shadow-2xl"
             >
-            {/* Top Bar (Video/Visual) */}
             <div className="h-[45vh] w-full border-b border-white/10 flex relative bg-black/40">
                 
-                {/* Left Sidebar for Top Section */}
                 <div className="w-24 border-r border-white/5 flex flex-col items-center py-6 gap-6 bg-black/20">
                     <button 
                     onClick={toggleRecording}
@@ -797,9 +728,9 @@ export default function App() {
                     <button 
                     onClick={() => setIsContextOpen(true)}
                     className="p-4 rounded-2xl text-slate-500 hover:text-white hover:bg-white/5 transition-all"
-                    title="Upload Context"
+                    title="Company Context"
                     >
-                    <FileText className="w-6 h-6" />
+                    <Building2 className="w-6 h-6" />
                     </button>
                     <button 
                     onClick={toggleHud}
@@ -811,27 +742,14 @@ export default function App() {
                     <button 
                     onClick={handlePanic}
                     className="p-4 rounded-2xl text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all mt-auto mb-4"
-                    title="Panic Button"
+                    title="Suggestion Assist"
                     >
                     <AlertTriangle className="w-6 h-6" />
                     </button>
                 </div>
 
-                {/* Main Video/Visual Area */}
                 <div className="flex-1 relative overflow-hidden flex items-center justify-center">
-                    {mode === 'mock' ? (
-                        <div className="w-full h-full relative">
-                            <video 
-                                key={isAiSpeaking ? "speaking" : "listening"}
-                                autoPlay loop muted={!isAiSpeaking} playsInline
-                                className="w-full h-full object-cover"
-                                src={isAiSpeaking ? "/avatar-speaking.mp4" : "/avatar-listening.mp4"}
-                            />
-                            <div className="absolute bottom-6 left-6 bg-black/60 px-4 py-2 rounded-xl text-xs font-bold text-blue-300 border border-blue-500/30">
-                                AI INTERVIEWER
-                            </div>
-                        </div>
-                    ) : showHud ? (
+                    {showHud ? (
                         <div className="w-full h-full relative bg-black">
                             {hudStream ? (
                                 <HudVideo stream={hudStream} />
@@ -849,7 +767,6 @@ export default function App() {
                         </div>
                     ) : (
                         <div className="w-full h-full relative flex items-center justify-center">
-                            {/* Large Audio Visualizer for Live Mode (Audio Only) */}
                             <div className="w-3/4 h-3/4">
                                 {isRecording ? (
                                     <AudioVisualizer analyser={analyser} isRecording={isRecording} height={200} />
@@ -865,41 +782,24 @@ export default function App() {
                         </div>
                     )}
 
-                    {/* Header Overlay */}
                     <div className="absolute top-6 left-8 right-8 flex justify-between items-start z-20 pointer-events-none">
                         <div className="pointer-events-auto">
                             <div className="flex items-center gap-2 mb-1">
                                 <div className="h-[1px] w-8 bg-white/50" />
-                                <span className="text-white/70 text-[10px] font-bold tracking-[0.3em] uppercase">NOVA OS v1.0</span>
+                                <span className="text-white/70 text-[10px] font-bold tracking-[0.3em] uppercase">NOVA OS v2.0</span>
                             </div>
                             <div 
                                 className="flex items-center gap-2 cursor-pointer group"
-                                onClick={() => setIsJobSelectorOpen(!isJobSelectorOpen)}
+                                onClick={() => setIsCompanySelectorOpen(!isCompanySelectorOpen)}
                             >
-                                <h2 className="text-2xl font-light text-white drop-shadow-md">{activeJob?.name}</h2>
+                                <h2 className="text-2xl font-light text-white drop-shadow-md">{activeCompany?.name}</h2>
                                 <ChevronDown size={16} className="text-white/50 group-hover:text-white transition-colors" />
                             </div>
                         </div>
-                        
-                        <div className="pointer-events-auto flex bg-black/40 backdrop-blur-md rounded-full p-1 border border-white/10 gap-1">
-                            <button 
-                                onClick={() => setMode('live')}
-                                className={`px-4 py-1.5 rounded-full text-[10px] font-bold tracking-wider transition-all ${mode === 'live' ? 'bg-white text-black' : 'text-slate-400 hover:text-white'}`}
-                            >
-                                LIVE
-                            </button>
-                            <button 
-                                onClick={() => setMode('mock')}
-                                className={`px-4 py-1.5 rounded-full text-[10px] font-bold tracking-wider transition-all ${mode === 'mock' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:text-white'}`}
-                            >
-                                MOCK
-                            </button>
-                        </div>
                     </div>
                     
-                    {/* Job Selector Dropdown */}
                     <AnimatePresence>
-                        {isJobSelectorOpen && (
+                        {isCompanySelectorOpen && (
                         <motion.div 
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -907,30 +807,30 @@ export default function App() {
                             className="absolute top-20 left-8 w-72 bg-black/90 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden z-50"
                         >
                             <div className="p-2">
-                            {jobs.map(job => (
+                            {companies.map(c => (
                                 <button
-                                key={job.id}
+                                key={c.id}
                                 onClick={() => {
-                                    setActiveJobId(job.id);
-                                    setIsJobSelectorOpen(false);
+                                    setActiveCompanyId(c.id);
+                                    setIsCompanySelectorOpen(false);
                                 }}
-                                className={`w-full text-left px-4 py-3 rounded-xl flex items-center justify-between group transition-colors ${activeJobId === job.id ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                                className={`w-full text-left px-4 py-3 rounded-xl flex items-center justify-between group transition-colors ${activeCompanyId === c.id ? 'bg-white/10' : 'hover:bg-white/5'}`}
                                 >
-                                <span className={`text-sm ${activeJobId === job.id ? 'text-white font-medium' : 'text-slate-400 group-hover:text-white'}`}>
-                                    {job.name}
+                                <span className={`text-sm ${activeCompanyId === c.id ? 'text-white font-medium' : 'text-slate-400 group-hover:text-white'}`}>
+                                    {c.name}
                                 </span>
-                                {activeJobId === job.id && <Star size={14} className="text-yellow-400 fill-yellow-400" />}
+                                {activeCompanyId === c.id && <Star size={14} className="text-yellow-400 fill-yellow-400" />}
                                 </button>
                             ))}
                             <button 
                                 onClick={() => {
-                                handleAddJob();
-                                setIsJobSelectorOpen(false);
+                                handleAddCompany();
+                                setIsCompanySelectorOpen(false);
                                 setIsContextOpen(true);
                                 }}
                                 className="w-full text-left px-4 py-3 rounded-xl flex items-center gap-2 text-sm text-blue-400 hover:bg-blue-500/10 transition-colors border-t border-white/10 mt-1"
                             >
-                                <Plus size={14} /> Create New Profile
+                                <Plus size={14} /> Add Target Company
                             </button>
                             </div>
                         </motion.div>
@@ -940,10 +840,8 @@ export default function App() {
                 </div>
             </div>
 
-            {/* Bottom Bar (Intelligence Console) */}
             <div className="flex-1 border-t border-white/10 grid grid-cols-3 bg-black/20 divide-x divide-white/10">
                 
-                {/* Col 1: Transcript */}
                 <div className="flex flex-col min-h-0 relative">
                     <div className="absolute top-0 left-0 w-full h-8 bg-gradient-to-b from-black/40 to-transparent z-10 pointer-events-none" />
                     <div className="p-4 flex items-center gap-2 border-b border-white/5 bg-white/[0.02]">
@@ -953,29 +851,33 @@ export default function App() {
                     <TranscriptFeed transcript={transcript} />
                 </div>
 
-                {/* Col 2: STAR Compass */}
-                <div className="flex flex-col items-center justify-center p-6 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-purple-500 opacity-30" />
-                    <STARCompass progress={starProgress} />
-                    <div className="w-full flex justify-between px-8 mt-4">
-                        {['S', 'T', 'A', 'R'].map((label, i) => (
-                            <div key={label} className="flex flex-col items-center gap-1">
-                                <span className="text-[10px] font-bold text-slate-500">{label}</span>
-                                <span className={`text-xs font-mono ${['text-cyan-400', 'text-blue-400', 'text-purple-400', 'text-green-400'][i]}`}>
-                                    {Math.round(Object.values(starProgress)[i])}%
-                                </span>
-                            </div>
-                        ))}
+                <div className="flex flex-col p-6 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500 opacity-30" />
+                    <div className="flex items-center gap-2 mb-6">
+                        <Building2 size={16} className="text-blue-400" />
+                        <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Company Profile</span>
+                    </div>
+                    <div className="space-y-4">
+                        <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+                            <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-2"><Globe size={10}/> Industry</div>
+                            <div className="text-sm text-white">Renewable Energy / Tech</div>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+                            <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-2"><Users size={10}/> Size</div>
+                            <div className="text-sm text-white">500 - 1,000 Employees</div>
+                        </div>
+                         <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+                            <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-2"><Zap size={10}/> Key Interest</div>
+                            <div className="text-sm text-white">Battery Storage R&D</div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Col 3: Nudges */}
-                <div className="flex flex-col min-h-0">
-                    <div className="p-4 flex items-center gap-2 border-b border-white/5 bg-white/[0.02]">
-                        <MessageSquare size={14} className="text-slate-400" />
-                        <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Live Insights</span>
+                <div className="flex flex-col min-h-0 relative">
+                    <div className="p-3 border-b border-white/5 bg-white/[0.02] flex justify-between items-center">
+                        <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase flex items-center gap-2"><MessageSquare size={12}/> Recommended Questions</span>
                     </div>
-                    <NudgeFeed nudges={nudges} />
+                    <RecommendedQuestions questions={questions} />
                 </div>
 
             </div>
