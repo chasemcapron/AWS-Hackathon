@@ -879,9 +879,7 @@ export default function App() {
                     </div>
                     <RecommendedQuestions questions={questions} />
                 </div>
-
             </div>
-
             </motion.div>
         </section>
       </div>
