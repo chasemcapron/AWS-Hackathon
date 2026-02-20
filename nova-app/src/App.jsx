@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, MicOff, Zap, Power, Activity, AlertCircle, ChevronDown, FileText, X, Upload, Check, MessageSquare, Plus, Trash2, Briefcase, CheckCircle2, Star, ChevronRight, User, Bot, Monitor, AlertTriangle, Eye, Mail, Download, BarChart2, Building2, Globe, Users } from 'lucide-react';
+import { Mic, MicOff, Zap, Power, Activity, AlertCircle, ChevronDown, FileText, X, Upload, Check, MessageSquare, Plus, Trash2, Briefcase, CheckCircle2, Star, ChevronRight, User, Bot, Monitor, AlertTriangle, Eye, Mail, Download, Building2, Globe, Users, Link as LinkIcon, Database, Sparkles, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // --- HOOKS ---
@@ -154,6 +154,52 @@ const AudioVisualizer = ({ analyser, isRecording, height = 80 }) => {
   );
 };
 
+const STARCompass = ({ progress, size = "large" }) => {
+  const rScale = size === "large" ? 1 : 0.6;
+  const strokeW = size === "large" ? 8 : 6;
+  
+  const rings = [
+    { label: 'Result', color: 'stroke-green-400', key: 'r', r: 90 * rScale },
+    { label: 'Action', color: 'stroke-purple-400', key: 'a', r: 70 * rScale },
+    { label: 'Task', color: 'stroke-blue-400', key: 't', r: 50 * rScale },
+    { label: 'Situation', color: 'stroke-cyan-400', key: 's', r: 30 * rScale },
+  ];
+
+  return (
+    <div className={`relative ${size === 'large' ? 'w-56 h-56' : 'w-40 h-40'} flex items-center justify-center`}>
+      <svg className="w-full h-full -rotate-90 transform">
+        {rings.map((ring, i) => {
+          const circumference = 2 * Math.PI * ring.r;
+          const offset = circumference - (progress[ring.key] / 100) * circumference;
+          
+          return (
+            <React.Fragment key={ring.key}>
+              <circle
+                cx="50%" cy="50%" r={ring.r}
+                fill="none"
+                className="stroke-white/10"
+                strokeWidth={strokeW}
+              />
+              <circle
+                cx="50%" cy="50%" r={ring.r}
+                fill="none"
+                className={`${ring.color} transition-all duration-1000 ease-out`}
+                strokeWidth={strokeW}
+                strokeDasharray={circumference}
+                strokeDashoffset={offset}
+                strokeLinecap="round"
+              />
+            </React.Fragment>
+          );
+        })}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+        <span className={`font-bold tracking-widest text-slate-500 ${size === 'large' ? 'text-xs' : 'text-[10px]'}`}>STAR</span>
+      </div>
+    </div>
+  );
+};
+
 const TranscriptFeed = ({ transcript }) => {
   const containerRef = useRef(null);
 
@@ -198,8 +244,19 @@ const TranscriptFeed = ({ transcript }) => {
 };
 
 const RecommendedQuestions = ({ questions }) => {
+  const containerRef = useRef(null);
+  
+  useEffect(() => {
+    if (containerRef.current && questions.length > 0) {
+        containerRef.current.scrollTo({
+            top: containerRef.current.scrollHeight,
+            behavior: 'smooth'
+        });
+    }
+  }, [questions]);
+
   return (
-    <div className="flex-1 overflow-y-auto px-2 space-y-3 no-scrollbar min-h-0 relative">
+    <div ref={containerRef} className="flex-1 overflow-y-auto px-2 space-y-3 no-scrollbar min-h-0 relative">
       <AnimatePresence mode='popLayout'>
         {questions.map((q) => (
           <motion.div
@@ -235,8 +292,13 @@ const RecommendedQuestions = ({ questions }) => {
   );
 };
 
-const ContextModal = ({ isOpen, onClose, companies, activeCompanyId, onAddCompany, onDeleteCompany, onSelectCompany, onUpdateCompany, onSuccess }) => {
+// --- PRE-FLIGHT MODALS ---
+
+const ContextModal = ({ isOpen, onClose, companies, activeCompanyId, onAddCompany, onDeleteCompany, onSelectCompany, onUpdateCompany, onGenerateBriefs }) => {
     const fileInputRef = useRef(null);
+    const [isKendraActive, setIsKendraActive] = useState(true);
+    const [isGenerating, setIsGenerating] = useState(false);
+
     if (!isOpen) return null;
     const activeCompany = companies.find(c => c.id === activeCompanyId);
     const currentContent = activeCompany?.context;
@@ -245,13 +307,11 @@ const ContextModal = ({ isOpen, onClose, companies, activeCompanyId, onAddCompan
     const processFile = (file) => {
         if (file.type === 'application/pdf') {
             const url = URL.createObjectURL(file);
-            onUpdateCompany(activeCompanyId, 'context', url); // In real app, this would parse PDF text
-            onSuccess(`Context uploaded for ${activeCompany.name}`);
+            onUpdateCompany(activeCompanyId, 'context', url); 
         } else {
             const reader = new FileReader();
             reader.onload = (event) => {
                 onUpdateCompany(activeCompanyId, 'context', event.target.result);
-                onSuccess("Context loaded");
             };
             reader.readAsText(file);
         }
@@ -261,21 +321,24 @@ const ContextModal = ({ isOpen, onClose, companies, activeCompanyId, onAddCompan
         if (e.dataTransfer.types.includes('text/plain')) {
             const text = e.dataTransfer.getData('text/plain');
             onUpdateCompany(activeCompanyId, 'context', text);
-            onSuccess("Context updated");
             return;
         }
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             processFile(e.dataTransfer.files[0]);
         }
     };
-    const handleFileInput = (e) => {
-        if (e.target.files && e.target.files.length > 0) {
-            processFile(e.target.files[0]);
-        }
+    
+    const handleGenerateClick = () => {
+        setIsGenerating(true);
+        // Simulate AWS Bedrock + Textract + Kendra processing time
+        setTimeout(() => {
+            setIsGenerating(false);
+            onGenerateBriefs();
+        }, 2000);
     };
 
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
         <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-4xl bg-black/90 border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex h-[80vh]">
             <div className="w-1/3 border-r border-white/10 bg-black/40 flex flex-col backdrop-blur-xl">
                 <div className="p-6 border-b border-white/10">
@@ -294,7 +357,14 @@ const ContextModal = ({ isOpen, onClose, companies, activeCompanyId, onAddCompan
                     ))}
                 </div>
             </div>
-            <div className="flex-1 flex flex-col bg-black/60">
+            <div className="flex-1 flex flex-col bg-black/60 relative">
+                {isGenerating && (
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-20 flex flex-col items-center justify-center text-white">
+                        <Sparkles size={48} className="text-blue-400 animate-pulse mb-4" />
+                        <h3 className="text-xl font-light mb-2">Analyzing Target...</h3>
+                        <p className="text-sm text-slate-400">AWS Bedrock compiling public & proprietary data.</p>
+                    </div>
+                )}
                 <div className="p-6 border-b border-white/10 flex justify-between items-center bg-black/20">
                     <input type="text" value={activeCompany?.name} onChange={(e) => onUpdateCompany(activeCompanyId, 'name', e.target.value)} className="bg-transparent text-xl font-medium text-white placeholder-slate-600 focus:outline-none w-full" placeholder="Company Name" />
                     <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors ml-4"><X size={24} /></button>
@@ -302,7 +372,7 @@ const ContextModal = ({ isOpen, onClose, companies, activeCompanyId, onAddCompan
                 <div className="p-6 flex-1 flex flex-col overflow-hidden bg-black/40">
                     <div className="relative group flex-1 flex flex-col" onDragOver={handleDragOver} onDrop={handleDrop}>
                          <div className={`absolute inset-0 border-2 border-dashed border-white/10 rounded-2xl pointer-events-none transition-colors ${currentContent ? 'opacity-0' : 'opacity-100 group-hover:border-white/30'}`} />
-                         <textarea className="flex-1 w-full bg-transparent border-none p-4 text-slate-300 placeholder-slate-600 focus:outline-none resize-none z-10" placeholder="Paste Company Context, Website URL, or Drag PDF here..." value={currentContent || ''} onChange={(e) => onUpdateCompany(activeCompanyId, 'context', e.target.value)} />
+                         <textarea className="flex-1 w-full bg-transparent border-none p-4 text-slate-300 placeholder-slate-600 focus:outline-none resize-none z-10" placeholder="Paste Company Context (News, Reports) or Drag PDF here..." value={currentContent || ''} onChange={(e) => onUpdateCompany(activeCompanyId, 'context', e.target.value)} />
                          {(!currentContent) && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                 <div className="text-center text-slate-600">
@@ -313,14 +383,180 @@ const ContextModal = ({ isOpen, onClose, companies, activeCompanyId, onAddCompan
                         )}
                     </div>
                 </div>
-                <div className="p-4 border-t border-white/10 flex justify-end gap-3 bg-black/20">
-                    <button onClick={() => onSuccess("Context Saved")} className="px-6 py-2 rounded-xl text-sm font-medium bg-white text-black hover:bg-slate-200 transition-colors flex items-center gap-2"><Check size={16} /> Save Changes</button>
+                
+                {/* AMAZON KENDRA TOGGLE */}
+                <div className="p-4 border-t border-white/10 bg-black/20 flex items-center justify-between">
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                        <div className={`w-10 h-5 rounded-full transition-colors flex items-center p-0.5 ${isKendraActive ? 'bg-blue-600' : 'bg-slate-700'}`}>
+                            <div className={`w-4 h-4 rounded-full bg-white transition-transform ${isKendraActive ? 'translate-x-5' : 'translate-x-0'}`} />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-sm font-medium text-white flex items-center gap-2">
+                                <Database size={14} className={isKendraActive ? "text-blue-400" : "text-slate-500"}/> 
+                                Texas A&M Knowledge Base
+                            </span>
+                            <span className="text-[10px] text-slate-400">Amazon Kendra Proprietary Search</span>
+                        </div>
+                    </label>
+                    <button onClick={handleGenerateClick} disabled={!activeCompany?.name || !currentContent} className="px-6 py-2.5 rounded-xl text-sm font-medium bg-white text-black hover:bg-slate-200 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <Sparkles size={16} /> Generate Briefs
+                    </button>
                 </div>
             </div>
         </motion.div>
         </motion.div>
     );
 };
+
+const PreFlightBriefsModal = ({ isOpen, company, onClose, onLaunchLive }) => {
+    const [activeTab, setActiveTab] = useState('internal'); // 'internal' | 'external'
+
+    if (!isOpen) return null;
+
+    const downloadBrief = (type) => {
+        let content, filename;
+        if (type === 'internal') {
+            content = `TEXAS A&M UNIVERSITY - INTERNAL INTERVIEWER BRIEF\n\nTarget: ${company?.name || 'Company'}\nGenerated by: NOVA OS (AWS Bedrock)\n\n1. COMPANY OVERVIEW & MARKET CONTEXT\n${company?.name || 'They'} recently expanded their R&D budget by 15%, focusing heavily on sustainable tech. Our Amazon Kendra search indicates A&M’s Engineering department has 3 ongoing grants in this specific sector.\n\n2. KNOWLEDGE GAPS TO EXPLORE\n- What is their timeline for commercializing the solid-state prototype?\n- How are supply chain issues affecting their local manufacturing?\n\n3. STRATEGIC QUESTION SEQUENCE (8-10)\nQ1. (Icebreaker) We saw the news about your recent facility expansion. How is the integration going?\nQ2. (Foundational) How does your team structure agile development for hardware?\nQ3. (Deep Dive) With the shift towards sustainable materials, how are you handling the procurement bottlenecks?\nQ4. (A&M Pivot) Our lab recently tested a similar polymer. How are you approaching heat dissipation?\n... [Additional questions generated dynamically] ...\n\n4. SUGGESTED CONVERSATION FLOW\nStart with recent news -> Move to operational challenges -> Pivot to A&M research synergies -> Close with pilot program proposal.`;
+            filename = `${company?.name || 'Company'}_Interviewer_Brief.txt`;
+        } else {
+            content = `PRE-INTERVIEW PACKET\nPrepared by Texas A&M University\n\nHello ${company?.name || 'Partner'},\n\nWe are looking forward to our upcoming discussion. To ensure we make the most of our time together, we’ve compiled a brief summary of our current understanding of your strategic initiatives.\n\nWHAT WE'VE LEARNED:\n- You are aggressively scaling your renewable energy hardware division.\n- You prioritize rapid prototyping and agile squad structures.\n\nPLEASE LET US KNOW WHAT WE GOT WRONG:\nWe want to ensure our baseline is accurate so we can skip the standard introductions and dive straight into high-value collaboration. If any of the above has shifted, please let us know during our call.\n\nFOUNDATIONAL QUESTIONS FOR OUR DISCUSSION:\n1. What are your most pressing technical bottlenecks this quarter?\n2. Where do you see the highest ROI for academic/industry partnerships?\n3. Which of our specific engineering capabilities aligns best with your roadmap?\n\nWhich of these questions interests you the most? We look forward to connecting.`;
+            filename = `${company?.name || 'Company'}_Outreach_Packet.txt`;
+        }
+
+        const element = document.createElement("a");
+        const file = new Blob([content], {type: 'text/plain'});
+        element.href = URL.createObjectURL(file);
+        element.download = filename;
+        document.body.appendChild(element); 
+        element.click();
+        document.body.removeChild(element);
+    };
+
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+            <motion.div initial={{ scale: 0.95, y: 10 }} animate={{ scale: 1, y: 0 }} className="w-full max-w-5xl bg-black/90 border border-white/10 rounded-3xl shadow-2xl flex flex-col h-[85vh]">
+                
+                {/* Header */}
+                <div className="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-blue-900/20 to-transparent">
+                    <div>
+                        <h2 className="text-2xl font-light text-white flex items-center gap-3">
+                            <Sparkles className="text-blue-400"/> Pre-Flight <span className="font-bold">Intelligence</span>
+                        </h2>
+                        <p className="text-slate-400 text-sm mt-1">Generated specifically for {company?.name || 'Target'}</p>
+                    </div>
+                    <button onClick={onClose} className="text-slate-400 hover:text-white"><X size={24} /></button>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex border-b border-white/10 px-6">
+                    <button onClick={() => setActiveTab('internal')} className={`py-4 px-6 text-sm font-medium transition-colors border-b-2 ${activeTab === 'internal' ? 'text-blue-400 border-blue-400' : 'text-slate-500 border-transparent hover:text-slate-300'}`}>
+                        1. Interviewer Brief (Internal)
+                    </button>
+                    <button onClick={() => setActiveTab('external')} className={`py-4 px-6 text-sm font-medium transition-colors border-b-2 ${activeTab === 'external' ? 'text-green-400 border-green-400' : 'text-slate-500 border-transparent hover:text-slate-300'}`}>
+                        2. Outreach Packet (External)
+                    </button>
+                </div>
+
+                {/* Content Area */}
+                <div className="flex-1 overflow-y-auto p-8 bg-black/40">
+                    {activeTab === 'internal' ? (
+                        <div className="max-w-3xl mx-auto space-y-6">
+                            <div className="flex justify-between items-start mb-8">
+                                <div>
+                                    <h3 className="text-3xl font-bold text-white mb-2">Interviewer Brief</h3>
+                                    <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold uppercase tracking-wider">Internal A&M Eyes Only</span>
+                                </div>
+                                <button onClick={() => downloadBrief('internal')} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white transition-colors"><Download size={20}/></button>
+                            </div>
+                            
+                            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+                                <h4 className="text-blue-400 font-bold mb-3 uppercase tracking-wider text-sm">Company Overview & A&M Overlap</h4>
+                                <p className="text-slate-300 text-sm leading-relaxed mb-4">
+                                    {company?.name || 'The target'} has recently expanded their R&D budget by 15%, focusing heavily on sustainable hardware. 
+                                    <br/><br/>
+                                    <span className="text-green-400 font-medium">Kendra Insight:</span> A&M’s Engineering department has 3 ongoing grants in this specific sector that should be leveraged as credibility markers.
+                                </p>
+                            </div>
+
+                            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+                                <h4 className="text-blue-400 font-bold mb-3 uppercase tracking-wider text-sm">Knowledge Gaps (Find out today)</h4>
+                                <ul className="list-disc list-inside text-slate-300 text-sm space-y-2 ml-2">
+                                    <li>What is their exact timeline for commercializing the solid-state prototype?</li>
+                                    <li>How are global supply chain issues affecting their local manufacturing?</li>
+                                    <li>Do they have a budget allocated for university pilot programs?</li>
+                                </ul>
+                            </div>
+
+                            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+                                <h4 className="text-blue-400 font-bold mb-3 uppercase tracking-wider text-sm">Strategic Question Sequence</h4>
+                                <div className="space-y-4 text-sm text-slate-300">
+                                    <div><strong className="text-white">Q1. (Icebreaker):</strong> We saw the news about your recent facility expansion. How is the integration going?</div>
+                                    <div><strong className="text-white">Q2. (Foundational):</strong> How does your team structure agile development for hardware?</div>
+                                    <div><strong className="text-white">Q3. (Deep Dive):</strong> With the shift towards sustainable materials, how are you handling the procurement bottlenecks?</div>
+                                    <div><strong className="text-white">Q4. (A&M Pivot):</strong> Our lab recently tested a similar polymer. How are you approaching heat dissipation?</div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="max-w-3xl mx-auto space-y-6">
+                            <div className="flex justify-between items-start mb-8">
+                                <div>
+                                    <h3 className="text-3xl font-bold text-white mb-2">Pre-Interview Packet</h3>
+                                    <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-300 text-xs font-bold uppercase tracking-wider">Send to Interviewee Prior to Call</span>
+                                </div>
+                                <button onClick={() => downloadBrief('external')} className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white transition-colors"><Download size={20}/></button>
+                            </div>
+
+                            <div className="bg-white text-black rounded-xl p-8 shadow-2xl relative overflow-hidden">
+                                {/* Mock PDF Look */}
+                                <div className="absolute top-0 left-0 w-full h-2 bg-[#500000]"></div>
+                                <div className="flex justify-between items-end mb-8 border-b pb-4">
+                                    <h1 className="text-2xl font-black tracking-tight text-[#500000]">TEXAS A&M</h1>
+                                    <span className="text-sm font-medium text-slate-500">Partnership Discovery</span>
+                                </div>
+                                
+                                <p className="text-slate-800 mb-6">Hello {company?.name || 'Partner'},</p>
+                                <p className="text-slate-800 mb-6 leading-relaxed">
+                                    We are looking forward to our upcoming discussion. To ensure we make the most of our time together and skip the standard introductions, we’ve compiled a brief summary of our current understanding of your strategic initiatives.
+                                </p>
+
+                                <h4 className="font-bold text-lg mb-3">Here is what we learned:</h4>
+                                <ul className="list-disc list-inside text-slate-700 mb-6 space-y-1">
+                                    <li>You are aggressively scaling your renewable energy hardware division.</li>
+                                    <li>You prioritize rapid prototyping and agile squad structures.</li>
+                                </ul>
+
+                                <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6">
+                                    <h4 className="font-bold text-amber-800 mb-1">Please let us know what we got wrong:</h4>
+                                    <p className="text-amber-900 text-sm">We want to ensure our baseline is accurate so we can dive straight into high-value collaboration. If any of the above has shifted, please let us know during our call.</p>
+                                </div>
+
+                                <h4 className="font-bold text-lg mb-3">Foundational questions for our discussion:</h4>
+                                <ol className="list-decimal list-inside text-slate-700 mb-6 space-y-2">
+                                    <li>What are your most pressing technical bottlenecks this quarter?</li>
+                                    <li>Where do you see the highest ROI for academic/industry partnerships?</li>
+                                    <li>Which of our specific engineering capabilities aligns best with your roadmap?</li>
+                                </ol>
+
+                                <p className="text-slate-800 font-medium italic">Which of these questions interests you the most? We look forward to connecting.</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer Action */}
+                <div className="p-6 border-t border-white/10 bg-black/60 flex justify-end">
+                    <button onClick={onLaunchLive} className="px-8 py-3 rounded-xl font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-2 transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)]">
+                        Launch Live Dashboard <ChevronRight size={18} />
+                    </button>
+                </div>
+
+            </motion.div>
+        </motion.div>
+    );
+}
+
+// --- POST-FLIGHT REPORT ---
 
 const AfterglowReport = ({ isOpen, onClose, onSendEmail }) => {
     const [isEmailOpen, setIsEmailOpen] = useState(false);
@@ -329,72 +565,27 @@ const AfterglowReport = ({ isOpen, onClose, onSendEmail }) => {
     if (!isOpen) return null;
 
     const handleDownloadReport = () => {
-        // TODO: This HTML structure will be populated by AWS Bedrock response in the real implementation.
-        // For now, it uses the hardcoded summary matching the mock script.
-        const reportHTML = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #333; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 40px; }
-                    .header { border-bottom: 3px solid #500000; padding-bottom: 20px; margin-bottom: 30px; }
-                    .logo-text { font-size: 24px; font-weight: bold; color: #500000; letter-spacing: 1px; }
-                    .title { font-size: 28px; margin-bottom: 10px; color: #111; }
-                    .meta { font-size: 14px; color: #666; margin-bottom: 30px; }
-                    .section { margin-bottom: 25px; }
-                    .section-title { font-size: 18px; font-weight: bold; color: #500000; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 15px; }
-                    .metric-box { background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 10px; }
-                    .metric { display: flex; justify-content: space-between; margin-bottom: 5px; }
-                    .footer { margin-top: 50px; font-size: 12px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <div class="logo-text">TEXAS A&M UNIVERSITY</div>
-                    <div style="font-size: 14px; color: #555;">Partnership Development Office</div>
-                </div>
+        const reportContent = `
+NOVA PARTNERSHIP REPORT
+-----------------------
+Session Date: ${new Date().toLocaleDateString()}
 
-                <div class="title">Strategic Partnership Executive Summary</div>
-                <div class="meta">Generated by NOVA Intelligence | Session Date: ${new Date().toLocaleDateString()}</div>
+COMPANY ANALYSIS:
+-----------------
+Interest Level: High
+Key Alignment: Innovation & Research
+Action Items: Send proposal by Friday.
 
-                <div class="section">
-                    <div class="section-title">Analysis Overview</div>
-                    <div class="metric-box">
-                        <div class="metric"><strong>Company Target:</strong> TechFlow Corp</div>
-                        <div class="metric"><strong>Partnership Potential:</strong> <span style="color: green; font-weight: bold;">HIGH</span></div>
-                        <div class="metric"><strong>Primary Alignment:</strong> Research & Innovation</div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Key Discussion Alignments</div>
-                    <ul>
-                        <li><strong>Renewable Energy Research:</strong> Strong mutual interest in solar efficiency and battery storage.</li>
-                        <li><strong>Innovation Grants:</strong> Potential for Q3 joint funding application.</li>
-                        <li><strong>Talent Pipeline:</strong> TechFlow showed interest in engineering internships.</li>
-                    </ul>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Action Items</div>
-                    <ol>
-                        <li>Send formal proposal regarding the Solid-State Battery Pilot Program by Friday.</li>
-                        <li>Schedule follow-up with TechFlow's CTO.</li>
-                        <li>Draft MOU for internship program.</li>
-                    </ol>
-                </div>
-
-                <div class="footer">
-                    CONFIDENTIAL - Internal Use Only. Generated by NOVA OS.
-                </div>
-            </body>
-            </html>
-        `;
+DISCUSSION HIGHLIGHTS:
+----------------------
+- Discussed joint research ventures.
+- Identified shared interest in renewable energy sector.
+        `.trim();
 
         const element = document.createElement("a");
-        const file = new Blob([reportHTML], {type: 'text/html'}); // Changed to HTML for formatting
+        const file = new Blob([reportContent], {type: 'text/plain'});
         element.href = URL.createObjectURL(file);
-        element.download = "Partnership_Summary_Report.html";
+        element.download = "Partnership_Summary.txt";
         document.body.appendChild(element); 
         element.click();
         document.body.removeChild(element);
@@ -421,7 +612,7 @@ const AfterglowReport = ({ isOpen, onClose, onSendEmail }) => {
                     />
                     <div className="flex justify-end gap-3">
                         <button onClick={() => window.open(`mailto:?subject=Partnership Follow Up&body=${encodeURIComponent(emailBody)}`)} className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center gap-2">
-                            <Mail size={16} /> Open in Mail App
+                            <Send size={16} /> Open in Mail App
                         </button>
                     </div>
                 </motion.div>
@@ -486,6 +677,7 @@ export default function App() {
   const [questions, setQuestions] = useState([]);
   const [transcript, setTranscript] = useState([]);
   const [isContextOpen, setIsContextOpen] = useState(false);
+  const [isBriefsModalOpen, setIsBriefsModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [isCompanySelectorOpen, setIsCompanySelectorOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
@@ -562,7 +754,7 @@ export default function App() {
             };
         } catch (err) {
             console.error("Screen capture failed:", err);
-            triggerToast("Could not access screen share", 'alert');
+            triggerToast("Preview: Screen Share Simulated", 'alert');
             setShowHud(true); 
         }
     }
@@ -625,6 +817,18 @@ export default function App() {
     }
   };
 
+  // Flow handlers
+  const handleGenerateBriefs = () => {
+      setIsContextOpen(false);
+      setIsBriefsModalOpen(true);
+  };
+
+  const handleLaunchLive = () => {
+      setIsBriefsModalOpen(false);
+      scrollToDashboard();
+      triggerToast("System Ready for Interview");
+  };
+
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden font-sans select-none">
       
@@ -645,9 +849,20 @@ export default function App() {
             onDeleteCompany={handleDeleteCompany}
             onSelectCompany={setActiveCompanyId}
             onUpdateCompany={handleUpdateCompany}
-            onSuccess={(msg) => triggerToast(msg)}
+            onGenerateBriefs={handleGenerateBriefs}
           />
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+         {isBriefsModalOpen && (
+             <PreFlightBriefsModal
+                isOpen={isBriefsModalOpen}
+                company={activeCompany}
+                onClose={() => setIsBriefsModalOpen(false)}
+                onLaunchLive={handleLaunchLive}
+             />
+         )}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -695,10 +910,10 @@ export default function App() {
             animate={{ opacity: 1 }}
             transition={{ delay: 2, duration: 1 }}
             className="absolute bottom-10 z-20 flex flex-col items-center gap-2 text-white/40 cursor-pointer hover:text-white/80 transition-colors"
-            onClick={scrollToDashboard}
+            onClick={() => setIsContextOpen(true)}
             >
-            <span className="text-[10px] tracking-widest uppercase">Scroll to Initialize</span>
-            <ChevronDown className="w-5 h-5 animate-bounce" />
+            <span className="text-[10px] tracking-widest uppercase">Begin Pre-Flight Prep</span>
+            <ChevronDown className="w-5 h-5 animate-bounce mt-2" />
             </motion.div>
         </section>
 
@@ -712,7 +927,7 @@ export default function App() {
             whileInView={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
-            className="relative w-full max-w-7xl min-h-[85vh] h-auto bg-black/80 backdrop-blur-3xl border border-white/10 rounded-[3rem] flex flex-col overflow-hidden z-10 shadow-2xl transition-all duration-500 border-white/10 shadow-2xl"
+            className="relative w-full max-w-7xl min-h-[85vh] h-auto bg-black/80 backdrop-blur-3xl border border-white/10 rounded-[3rem] flex flex-col overflow-hidden z-10 shadow-2xl transition-all duration-500 shadow-2xl"
             >
             <div className="h-[45vh] w-full border-b border-white/10 flex relative bg-black/40">
                 
@@ -851,26 +1066,27 @@ export default function App() {
                     <TranscriptFeed transcript={transcript} />
                 </div>
 
-                <div className="flex flex-col p-6 relative overflow-hidden">
+                <div className="flex flex-col p-6 relative overflow-hidden items-center justify-center">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500 opacity-30" />
-                    <div className="flex items-center gap-2 mb-6">
-                        <Building2 size={16} className="text-blue-400" />
-                        <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Company Profile</span>
+                    
+                    <div className="text-center space-y-4">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 mb-2">
+                           <Building2 size={12} className="text-blue-400" />
+                           <span className="text-[10px] font-bold tracking-widest text-blue-300 uppercase">Active Target</span>
+                        </div>
+                        
+                        <h2 className="text-4xl font-light text-white tracking-tight">
+                            {activeCompany?.name || "No Company Selected"}
+                        </h2>
+                        
+                        <div className="flex items-center justify-center gap-2 text-slate-400">
+                             <div className={`w-2 h-2 rounded-full ${activeCompany?.context ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`} />
+                             <span className="text-xs uppercase tracking-wider font-medium">
+                                {activeCompany?.context ? "Context Loaded" : "Waiting for Data"}
+                             </span>
+                        </div>
                     </div>
-                    <div className="space-y-4">
-                        <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-                            <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-2"><Globe size={10}/> Industry</div>
-                            <div className="text-sm text-white">Renewable Energy / Tech</div>
-                        </div>
-                        <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-                            <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-2"><Users size={10}/> Size</div>
-                            <div className="text-sm text-white">500 - 1,000 Employees</div>
-                        </div>
-                         <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-                            <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-2"><Zap size={10}/> Key Interest</div>
-                            <div className="text-sm text-white">Battery Storage R&D</div>
-                        </div>
-                    </div>
+
                 </div>
 
                 <div className="flex flex-col min-h-0 relative">
@@ -879,7 +1095,9 @@ export default function App() {
                     </div>
                     <RecommendedQuestions questions={questions} />
                 </div>
+
             </div>
+
             </motion.div>
         </section>
       </div>
