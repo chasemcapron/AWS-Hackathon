@@ -5,6 +5,9 @@
     "tailwindcss": "^4.1.18"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.994.0",
+    "@aws-sdk/client-kendra": "^3.994.0",
+    "@aws-sdk/client-transcribe-streaming": "^3.994.0",
     "@tailwindcss/postcss": "^4.1.18"
   }
 }
