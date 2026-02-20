@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAudioCapture } from './hooks/useAudioCapture';
 import { generateTargetOutput } from './services/bedrockService';
-import { Mic, MicOff, Activity, ChevronDown, X, Check, MessageSquare, CheckCircle2, Star, ChevronRight, Bot, Monitor, AlertTriangle, Download, Building2, Database, Search, MessageCircle, Instagram, Sparkles, Loader2 } from 'lucide-react';
+import { Mic, MicOff, Activity, ChevronDown, X, Check, MessageSquare, CheckCircle2, Star, ChevronRight, Bot, AlertTriangle, Download, Building2, Database, Search, MessageCircle, Instagram, Sparkles, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // --- COMPONENTS ---
@@ -29,25 +29,26 @@ const Toast = ({ message, type = 'success', onClose }) => {
   );
 };
 
-const HudVideo = ({ stream }) => {
-  const videoRef = useRef(null);
-
-  useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
-    }
-  }, [stream]);
-
-  return (
-    <video 
-      ref={videoRef}
-      autoPlay 
-      playsInline 
-      muted
-      className="w-full h-full object-contain bg-black"
-    />
-  );
-};
+// Pivoting away from live video call — HudVideo component commented out
+// const HudVideo = ({ stream }) => {
+//   const videoRef = useRef(null);
+//
+//   useEffect(() => {
+//     if (videoRef.current && stream) {
+//       videoRef.current.srcObject = stream;
+//     }
+//   }, [stream]);
+//
+//   return (
+//     <video
+//       ref={videoRef}
+//       autoPlay
+//       playsInline
+//       muted
+//       className="w-full h-full object-contain bg-black"
+//     />
+//   );
+// };
 
 const AudioVisualizer = ({ analyser, isRecording, height = 80 }) => {
   const canvasRef = useRef(null);
@@ -519,8 +520,9 @@ export default function App() {
   const [isCompanySelectorOpen, setIsCompanySelectorOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   
-  const [showHud, setShowHud] = useState(false);
-  const [hudStream, setHudStream] = useState(null);
+  // Pivoting away from live video call — screen share state commented out
+  // const [showHud, setShowHud] = useState(false);
+  // const [hudStream, setHudStream] = useState(null);
 
   // // Appends new real-time AWS Transcribe text to transcript, grouped by speaker
   // const handleTranscriptReceived = useCallback((newText, speaker, isPartial) => {
@@ -596,30 +598,31 @@ export default function App() {
     ));
   };
 
-  const toggleHud = async () => {
-    if (showHud) {
-        if (hudStream) {
-            hudStream.getTracks().forEach(track => track.stop());
-            setHudStream(null);
-        }
-        setShowHud(false);
-    } else {
-        try {
-            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-            setHudStream(stream);
-            setShowHud(true);
-            
-            stream.getVideoTracks()[0].onended = () => {
-                setShowHud(false);
-                setHudStream(null);
-            };
-        } catch (err) {
-            console.error("Screen capture failed:", err);
-            triggerToast("Preview: Screen Share Simulated", 'alert');
-            setShowHud(true); 
-        }
-    }
-  };
+  // Pivoting away from live video call — screen share toggle commented out
+  // const toggleHud = async () => {
+  //   if (showHud) {
+  //       if (hudStream) {
+  //           hudStream.getTracks().forEach(track => track.stop());
+  //           setHudStream(null);
+  //       }
+  //       setShowHud(false);
+  //   } else {
+  //       try {
+  //           const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+  //           setHudStream(stream);
+  //           setShowHud(true);
+  //
+  //           stream.getVideoTracks()[0].onended = () => {
+  //               setShowHud(false);
+  //               setHudStream(null);
+  //           };
+  //       } catch (err) {
+  //           console.error("Screen capture failed:", err);
+  //           triggerToast("Preview: Screen Share Simulated", 'alert');
+  //           setShowHud(true);
+  //       }
+  //   }
+  // };
 
   const handlePanic = () => {
       addQuestion({ id: Date.now(), type: 'alert', text: "Pivot constraint: Ask how regulatory changes in ERCOT affect their 5-year outlook." });
@@ -776,13 +779,14 @@ export default function App() {
                     >
                     <Building2 className="w-6 h-6" />
                     </button>
-                    <button 
+                    {/* Pivoting away from live video call — screen share HUD button commented out */}
+                    {/* <button
                     onClick={toggleHud}
                     className={`p-4 rounded-2xl transition-all ${showHud ? 'text-blue-400 bg-white/10' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
                     title="Screen Share HUD"
                     >
                     <Monitor className="w-6 h-6" />
-                    </button>
+                    </button> */}
                     <button 
                     onClick={handlePanic}
                     className="p-4 rounded-2xl text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all mt-auto mb-4"
@@ -793,7 +797,8 @@ export default function App() {
                 </div>
 
                 <div className="flex-1 relative overflow-hidden flex items-center justify-center">
-                    {showHud ? (
+                    {/* Pivoting away from live video call — HUD screen share display commented out */}
+                    {/* {showHud ? (
                         <div className="w-full h-full relative bg-black">
                             {hudStream ? (
                                 <HudVideo stream={hudStream} />
@@ -808,7 +813,7 @@ export default function App() {
                                 LIVE FEED
                             </div>
                         </div>
-                    ) : (
+                    ) : ( */}
                         <div className="w-full h-full relative flex items-center justify-center">
                             <div className="w-3/4 h-3/4">
                                 {isRecording ? (
@@ -823,7 +828,7 @@ export default function App() {
                                 )}
                             </div>
                         </div>
-                    )}
+                    {/* )} */}
 
                     <div className="absolute top-6 left-8 right-8 flex justify-between items-start z-20 pointer-events-none">
                         <div className="pointer-events-auto">
@@ -876,16 +881,16 @@ export default function App() {
                 </div>
             </div>
 
-            <div className="flex-1 border-t border-white/10 grid grid-cols-3 bg-black/20 divide-x divide-white/10">
-                
-                <div className="flex flex-col min-h-0 relative">
+            <div className="flex-1 border-t border-white/10 grid grid-cols-2 bg-black/20 divide-x divide-white/10">
+
+                {/* Pivoting away from transcribing — Live Transcript panel commented out */}
+                {/* <div className="flex flex-col min-h-0 relative">
                     <div className="absolute top-0 left-0 w-full h-8 bg-gradient-to-b from-black/40 to-transparent z-10 pointer-events-none" />
                     <div className="p-4 flex items-center gap-2 border-b border-white/5 bg-white/[0.02]">
                         <Activity size={14} className="text-slate-400" />
                         <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Live Transcript</span>
                     </div>
-                    {/* <TranscriptFeed transcript={transcript} partialTranscript={partialTranscript} /> */}
-                </div>
+                </div> */}
 
                 <div className="flex flex-col p-6 relative overflow-hidden items-center justify-center">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500 opacity-30" />
