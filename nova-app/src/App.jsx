@@ -1,86 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAudioCapture } from './hooks/useAudioCapture';
-import { Mic, MicOff, Zap, Activity, AlertCircle, ChevronDown, FileText, X, Upload, Check, MessageSquare, Plus, Trash2, Briefcase, CheckCircle2, Star, ChevronRight, User, Bot, Monitor, AlertTriangle, Eye, Mail, Download, Building2, Globe, Users, Database, Search, MessageCircle, Instagram, Sparkles, Loader2 } from 'lucide-react';
+import { generateTargetOutput } from './services/bedrockService';
+import { Mic, MicOff, Activity, ChevronDown, X, Check, MessageSquare, CheckCircle2, Star, ChevronRight, Bot, Monitor, AlertTriangle, Download, Building2, Database, Search, MessageCircle, Instagram, Sparkles, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-// --- AWS BEDROCK SERVICE (SIMULATED FOR PREVIEW STABILITY) ---
-// Note: External AWS SDK imports have been bypassed to prevent compilation errors in this environment.
-// This function perfectly simulates the Bedrock response using the exact Hackathon Case data.
-
-const generateTargetOutput = async (companyName, industry) => {
-  // Simulating AWS Bedrock generation latency
-  await new Promise(resolve => setTimeout(resolve, 2500));
-
-  // Case 001: GridFlex Energy
-  if (companyName.includes('GridFlex')) {
-    return {
-      revenueMechanics: { whoPays: 'Consumers / Grid', when: 'Post-Install + Monthly', recurring: 'Yes (Arbitrage portion)', fulfillmentDependencies: 'High (Installers)', marginBand: 'Moderate (20-30%)' },
-      constraintMap: ['Fulfillment / Installer network scaling', 'Capital required for hardware acquisition', 'Regulatory stability in ERCOT'],
-      primaryConstraint: 'Fulfillment & Regulation',
-      marketStructure: { regulatory: 'Deregulated (Texas)', fragmentation: 'High at distribution layer', barriers: 'Capital, Grid Approvals', disintermediation: 'Moderate risk' },
-      strategicTensions: ['Expansion Risk: Dominating Texas vs Expanding', 'Concentration Risk: Reliance on 3rd-party installers', 'Regulatory Risk: ERCOT compensation rules'],
-      aiOpportunities: ['Installer monitoring and dispatch routing', 'Lead scoring for high-propensity rooftops', 'Regulatory tracking and document synthesis']
-    };
-  }
-
-  // Case 002: LoneStar Precision
-  if (companyName.includes('LoneStar')) {
-    return {
-      revenueMechanics: { whoPays: 'Energy infrastructure OEMs', when: 'Upon delivery (Net 30/60)', recurring: 'High repeat, not contract', fulfillmentDependencies: 'High (Skilled Machinists)', marginBand: 'Moderate (~20%)' },
-      constraintMap: ['Skilled labor shortage', 'Capex timing risk ($4M)', 'Utilization near ceiling'],
-      primaryConstraint: 'Talent & Capacity',
-      marketStructure: { regulatory: 'Standard OSHA/ISO', fragmentation: 'Highly fragmented regional shops', barriers: 'High Equipment Capex', disintermediation: 'Low risk' },
-      strategicTensions: ['Succession pivot: scale vs exit', 'Adjacency repositioning (data centers/hydrogen)', 'Automation vs Human expertise'],
-      aiOpportunities: ['AI quoting to increase margin 3-5%', 'Job scheduling optimization', 'Predictive maintenance on CNC machines']
-    };
-  }
-
-  // Case 003: Texas Mechanical Services Group
-  if (companyName.includes('Texas Mechanical')) {
-    return {
-      revenueMechanics: { whoPays: 'Property Managers / Commercial Landlords', when: 'Monthly (Contracts) + Incident', recurring: 'Yes (50% Maintenance)', fulfillmentDependencies: 'High (Technicians)', marginBand: 'Maintenance underpriced' },
-      constraintMap: ['15-20% technician hours lost to routing', '20% technician turnover', 'Seasonal weather volatility'],
-      primaryConstraint: 'Fulfillment (Routing & Labor)',
-      marketStructure: { regulatory: 'Standard Licensing', fragmentation: 'Fragmented regional markets', barriers: 'Low entry, hard to scale', disintermediation: 'PE Roll-up pressure' },
-      strategicTensions: ['Acquisition target vs independent scaler', 'Smart building integration vs traditional HVAC', 'Pricing power underestimation'],
-      aiOpportunities: ['Routing optimization (Save 15% hours)', 'Dynamic pricing based on weather/demand', 'Predictive parts inventory']
-    };
-  }
-
-  // Case 004: LaunchStack Tech
-  if (companyName.includes('LaunchStack')) {
-    return {
-      revenueMechanics: { whoPays: 'Marketing Agencies (B2B2B)', when: 'Monthly SaaS', recurring: 'Yes (High NRR)', fulfillmentDependencies: 'Low (Software)', marginBand: 'High (70%+)' },
-      constraintMap: ['Dual-layer retention complexity', 'Feature creep pressure', 'Pricing constrained by downstream elasticity'],
-      primaryConstraint: 'Strategic Execution (Retention)',
-      marketStructure: { regulatory: 'Low/Data Privacy', fragmentation: 'Consolidated at top (HubSpot, etc.)', barriers: 'High switching costs', disintermediation: 'High (Agencies building own tech)' },
-      strategicTensions: ['Product moat vs Distribution moat', 'Governance risk from agency misuse', 'Ecosystem dependency'],
-      aiOpportunities: ['SMB churn prediction', 'Cross-SMB performance benchmarking', 'Automated campaign optimization']
-    };
-  }
-
-  // Case 005: PrairieLogic Ag
-  if (companyName.includes('PrairieLogic')) {
-    return {
-      revenueMechanics: { whoPays: 'Large-scale Farmers', when: 'Upfront (Hardware) + Monthly (Data)', recurring: 'Yes (Growing 35% mix)', fulfillmentDependencies: 'Moderate (Install/Onboarding)', marginBand: 'Moderate (Hardware) / High (SaaS)' },
-      constraintMap: ['Weather volatility risk', 'Commodity price cyclicality', 'High onboarding friction / Tech literacy'],
-      primaryConstraint: 'Demand Volatility & Adoption',
-      marketStructure: { regulatory: 'Water usage policies', fragmentation: 'Oligopoly in heavy equipment, fragmented in tech', barriers: 'Data moat (1.2M acres)', disintermediation: 'Low' },
-      strategicTensions: ['Hardware as Trojan Horse vs True SaaS', 'Expansion beyond Texas / Crop mix concentration', 'Insurance adjacency positioning'],
-      aiOpportunities: ['Yield predictive intelligence', 'Water stress automation', 'Insurance risk modeling']
-    };
-  }
-
-  // Default Fallback
-  return {
-    revenueMechanics: { whoPays: 'B2B Clients', when: 'Net 30', recurring: 'Mixed', fulfillmentDependencies: 'Moderate', marginBand: '15-25%' },
-    constraintMap: ['Supply chain friction', 'Customer acquisition cost', 'Talent retention'],
-    primaryConstraint: 'Growth Execution',
-    marketStructure: { regulatory: 'Standard', fragmentation: 'Moderate', barriers: 'Medium', disintermediation: 'Low' },
-    strategicTensions: ['Scale vs Profitability', 'Product expansion vs Focus'],
-    aiOpportunities: ['Workflow automation', 'Lead scoring']
-  };
-};
 
 // --- COMPONENTS ---
 
@@ -177,48 +99,73 @@ const AudioVisualizer = ({ analyser, isRecording, height = 80 }) => {
   );
 };
 
-const TranscriptFeed = ({ transcript }) => {
-  const containerRef = useRef(null);
+// const TranscriptFeed = ({ transcript, partialTranscript = {} }) => {
+//   const containerRef = useRef(null);
+//   const partialEntries = Object.entries(partialTranscript).filter(([, text]) => text);
 
-  useEffect(() => {
-    if (containerRef.current && transcript.length > 0) {
-        containerRef.current.scrollTo({
-            top: containerRef.current.scrollHeight,
-            behavior: 'smooth'
-        });
-    }
-  }, [transcript]);
+//   useEffect(() => {
+//     if (containerRef.current && (transcript.length > 0 || partialEntries.length > 0)) {
+//         containerRef.current.scrollTo({
+//             top: containerRef.current.scrollHeight,
+//             behavior: 'smooth'
+//         });
+//     }
+//   }, [transcript, partialEntries.length]);
 
-  return (
-    <div ref={containerRef} className="w-full h-full overflow-y-auto px-4 space-y-4 no-scrollbar relative">
-      {transcript.length === 0 && (
-        <div className="h-full flex flex-col items-center justify-center text-slate-600 text-sm italic opacity-50">
-          <Activity size={32} className="mb-2" />
-          <span>Waiting for real-time audio...</span>
-        </div>
-      )}
-      {transcript.map((msg, i) => (
-        <motion.div
-          key={i}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
-        >
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-white text-black' : 'bg-white/10 text-white'}`}>
-            {msg.role === 'user' ? <User size={16} /> : <Briefcase size={16} />}
-          </div>
-          <div className={`p-4 rounded-2xl max-w-[80%] text-sm leading-relaxed ${
-            msg.role === 'user' 
-              ? 'bg-white/10 text-slate-100 rounded-tr-none' 
-              : 'bg-black/40 border border-white/5 text-slate-300 rounded-tl-none'
-          }`}>
-            {msg.text}
-          </div>
-        </motion.div>
-      ))}
-    </div>
-  );
-};
+//   return (
+//     <div ref={containerRef} className="w-full h-full overflow-y-auto px-4 space-y-4 no-scrollbar relative">
+//       {transcript.length === 0 && partialEntries.length === 0 && (
+//         <div className="h-full flex flex-col items-center justify-center text-slate-600 text-sm italic opacity-50">
+//           <Activity size={32} className="mb-2" />
+//           <span>Waiting for real-time audio...</span>
+//         </div>
+//       )}
+//       {transcript.map((msg, i) => (
+//         <motion.div
+//           key={i}
+//           initial={{ opacity: 0, y: 10 }}
+//           animate={{ opacity: 1, y: 0 }}
+//           className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+//         >
+//           <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-white text-black' : 'bg-white/10 text-white'}`}>
+//             {msg.role === 'user' ? <User size={16} /> : <Briefcase size={16} />}
+//           </div>
+//           <div className={`p-4 rounded-2xl max-w-[80%] text-sm leading-relaxed ${
+//             msg.role === 'user'
+//               ? 'bg-white/10 text-slate-100 rounded-tr-none'
+//               : 'bg-black/40 border border-white/5 text-slate-300 rounded-tl-none'
+//           }`}>
+//             {msg.text}
+//           </div>
+//         </motion.div>
+//       ))}
+//       {partialEntries.map(([role, text]) => (
+//         <motion.div
+//           key={`partial-${role}`}
+//           initial={{ opacity: 0, y: 6 }}
+//           animate={{ opacity: 1, y: 0 }}
+//           className={`flex gap-4 ${role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+//         >
+//           <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 opacity-50 ${role === 'user' ? 'bg-white text-black' : 'bg-white/10 text-white'}`}>
+//             {role === 'user' ? <User size={16} /> : <Briefcase size={16} />}
+//           </div>
+//           <div className={`p-4 rounded-2xl max-w-[80%] text-sm leading-relaxed opacity-60 italic ${
+//             role === 'user'
+//               ? 'bg-white/5 text-slate-300 rounded-tr-none border border-white/10'
+//               : 'bg-black/20 border border-white/5 text-slate-400 rounded-tl-none'
+//           }`}>
+//             {text}
+//             <span className="inline-flex gap-0.5 ml-1 align-middle">
+//               <span className="w-1 h-1 rounded-full bg-current animate-bounce" style={{ animationDelay: '0ms' }} />
+//               <span className="w-1 h-1 rounded-full bg-current animate-bounce" style={{ animationDelay: '150ms' }} />
+//               <span className="w-1 h-1 rounded-full bg-current animate-bounce" style={{ animationDelay: '300ms' }} />
+//             </span>
+//           </div>
+//         </motion.div>
+//       ))}
+//     </div>
+//   );
+// };
 
 const RecommendedQuestions = ({ questions }) => {
   const containerRef = useRef(null);
@@ -565,7 +512,8 @@ const AfterglowReport = ({ isOpen, onClose, company }) => {
 export default function App() {
   
   const [questions, setQuestions] = useState([]);
-  const [transcript, setTranscript] = useState([]);
+  // const [transcript, setTranscript] = useState([]);
+  // const [partialTranscript, setPartialTranscript] = useState({});
   const [isPreflightOpen, setIsPreflightOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [isCompanySelectorOpen, setIsCompanySelectorOpen] = useState(false);
@@ -574,32 +522,41 @@ export default function App() {
   const [showHud, setShowHud] = useState(false);
   const [hudStream, setHudStream] = useState(null);
 
-  // Appends new real-time AWS Transcribe text to transcript, grouped by speaker
-  const handleTranscriptReceived = useCallback((newText, speaker) => {
-    // spk_0 → interviewer (us), spk_1 → company rep; default to 'user' if no label
-    const role = (!speaker || speaker === 'spk_0') ? 'user' : 'interviewer';
+  // // Appends new real-time AWS Transcribe text to transcript, grouped by speaker
+  // const handleTranscriptReceived = useCallback((newText, speaker, isPartial) => {
+  //   // spk_0 → interviewer (us), spk_1 → company rep; default to 'user' if no label
+  //   const role = (!speaker || speaker === 'spk_0') ? 'user' : 'interviewer';
 
-    setTranscript(prev => {
-      if (prev.length === 0) return [{ role, text: newText }];
+  //   if (isPartial) {
+  //     // Show the in-progress text immediately as a live "typing" bubble
+  //     setPartialTranscript(prev => ({ ...prev, [role]: newText }));
+  //     return;
+  //   }
 
-      const lastMsg = prev[prev.length - 1];
+  //   // Final result: clear the partial bubble for this role, then commit to transcript
+  //   setPartialTranscript(prev => ({ ...prev, [role]: null }));
 
-      // Append to the existing bubble if the same speaker is still talking
-      if (lastMsg && lastMsg.role === role) {
-        const updated = [...prev];
-        updated[updated.length - 1] = {
-          ...lastMsg,
-          text: lastMsg.text + ' ' + newText,
-        };
-        return updated;
-      }
+  //   setTranscript(prev => {
+  //     if (prev.length === 0) return [{ role, text: newText }];
 
-      // New speaker → new bubble
-      return [...prev, { role, text: newText }];
-    });
-  }, []);
+  //     const lastMsg = prev[prev.length - 1];
 
-  const { isRecording, analyser, startRecording, stopRecording } = useAudioCapture(handleTranscriptReceived);
+  //     // Append to the existing bubble if the same speaker is still talking
+  //     if (lastMsg && lastMsg.role === role) {
+  //       const updated = [...prev];
+  //       updated[updated.length - 1] = {
+  //         ...lastMsg,
+  //         text: lastMsg.text + ' ' + newText,
+  //       };
+  //       return updated;
+  //     }
+
+  //     // New speaker → new bubble
+  //     return [...prev, { role, text: newText }];
+  //   });
+  // }, []);
+
+  const { isRecording, analyser, startRecording, stopRecording } = useAudioCapture(null);
   
   // PRE-LOADED HACKATHON CASES
   const [companies, setCompanies] = useState([
@@ -697,7 +654,8 @@ export default function App() {
     } else {
         startRecording();
         setQuestions([]);
-        setTranscript([]);
+        // setTranscript([]);
+        // setPartialTranscript({});
     }
   };
 
@@ -926,7 +884,7 @@ export default function App() {
                         <Activity size={14} className="text-slate-400" />
                         <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Live Transcript</span>
                     </div>
-                    <TranscriptFeed transcript={transcript} />
+                    {/* <TranscriptFeed transcript={transcript} partialTranscript={partialTranscript} /> */}
                 </div>
 
                 <div className="flex flex-col p-6 relative overflow-hidden items-center justify-center">
